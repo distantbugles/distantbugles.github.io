@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>distant bugles</title>
+  <style>
+    :root { --fg:#111; --bg:#fff; --muted:rgba(0,0,0,.55); }
+    html,body { height:100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+    }
+    main { max-width: 760px; margin: 10vh auto; padding: 0 22px; }
+    h1 { font-size: 22px; font-weight: 600; margin: 18px 0 10px; }
+    p { margin: 10px 0; }
+    .btn {
+      display: inline-block;
+      border: 1px solid var(--fg);
+      padding: 12px 14px;
+      background: transparent;
+      cursor: pointer;
+      font: inherit;
+      letter-spacing: .2px;
+    }
+    .small { font-size: 13px; color: var(--muted); margin-top: 18px; }
+    .rule { margin-top: 28px; }
+    a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div>distant bugles</div>
+    <h1>an island</h1>
+
+    <button class="btn" type="button" onclick="alert('Player comes next.')">play</button>
+
+    <p class="small">no menus. no feed. things may change.</p>
+
+    <div class="rule">
+      <p class="small">if you hear something you want again: email me a lyric, a timestamp, or a description.</p>
+    </div>
+
+    <p class="small">
+      <a href="#" onclick="alert('Bandcamp link later.'); return false;">bandcamp</a>
+      ·
+      <a href="#" onclick="alert('Email link later.'); return false;">contact</a>
+    </p>
+  </main>
+</body>
+</html>
