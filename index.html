@@ -40,6 +40,9 @@
   <audio controls loop preload="none" style="width:100%; margin-top:8px;">
     <source src="audio/cold_moon_16_44_1_FLAC_export_2026_01_12.flac" type="audio/flac">
   </audio>
+
+     <canvas id="viz" width="760" height="140" style="width:100%; height:140px; display:block; margin-top:12px; border:1px solid rgba(0,0,0,.15);"></canvas> 
+      
 </div>
 
     <p class="small">things will change.</p>
@@ -54,5 +57,111 @@
 <a href="mailto:faunafloramusic@gmail.com?subject=Hello">contact</a>
     </p>
   </main>
+
+<script>
+(() => {
+  const audio = document.querySelector("audio");
+  const canvas = document.getElementById("viz");
+  if (!audio || !canvas) return;
+
+  const ctx2d = canvas.getContext("2d", { alpha: false });
+  const DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+
+  function resize() {
+    const cssW = canvas.clientWidth || 760;
+    const cssH = canvas.clientHeight || 140;
+    canvas.width = Math.floor(cssW * DPR);
+    canvas.height = Math.floor(cssH * DPR);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  let audioCtx, analyser, data, rafId, started = false;
+
+  function ensureAudioGraph() {
+    if (started) return;
+    started = true;
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.85;
+
+    const src = audioCtx.createMediaElementSource(audio);
+    src.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    data = new Uint8Array(analyser.fftSize);
+  }
+
+  function draw() {
+    rafId = requestAnimationFrame(draw);
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // background (subtle “film” feel)
+    ctx2d.fillStyle = "#f6f6f4";
+    ctx2d.fillRect(0, 0, w, h);
+
+    // if not playing, keep it still
+    if (audio.paused || audio.ended) {
+      ctx2d.fillStyle = "rgba(0,0,0,.45)";
+      ctx2d.font = `${14 * DPR}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
+      ctx2d.fillText("press play", 14 * DPR, 28 * DPR);
+      return;
+    }
+
+    analyser.getByteTimeDomainData(data);
+
+    // draw a single, slightly “haunted” waveform
+    ctx2d.lineWidth = 2 * DPR;
+    ctx2d.strokeStyle = "rgba(0,0,0,.75)";
+    ctx2d.beginPath();
+
+    const mid = h * 0.5;
+    const step = w / (data.length - 1);
+
+    for (let i = 0; i < data.length; i++) {
+      const v = (data[i] - 128) / 128;        // -1..1
+      const x = i * step;
+
+      // tiny wobble so it feels alive, not “tech demo”
+      const wobble = Math.sin((Date.now() * 0.002) + i * 0.02) * (2.0 * DPR);
+
+      const y = mid + v * (h * 0.28) + wobble;
+
+      if (i === 0) ctx2d.moveTo(x, y);
+      else ctx2d.lineTo(x, y);
+    }
+
+    ctx2d.stroke();
+
+    // faint scanline texture
+    ctx2d.strokeStyle = "rgba(0,0,0,.05)";
+    ctx2d.lineWidth = 1 * DPR;
+    for (let y = 0; y < h; y += 3 * DPR) {
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, y);
+      ctx2d.lineTo(w, y);
+      ctx2d.stroke();
+    }
+  }
+
+  // iOS/Safari needs a user gesture to start AudioContext
+  audio.addEventListener("play", () => {
+    ensureAudioGraph();
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    if (!rafId) draw();
+  });
+
+  audio.addEventListener("pause", () => {
+    // keep drawing off if you want absolute stillness:
+    // cancelAnimationFrame(rafId); rafId = null;
+  });
+
+})();
+</script>
+  
 </body>
 </html>
