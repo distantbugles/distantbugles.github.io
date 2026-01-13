@@ -5,194 +5,152 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>distant bugles</title>
   <style>
-    :root { --fg:#111; --bg:#fff; --muted:rgba(0,0,0,.55); }
-    html,body { height:100%; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--fg);
-      font: 18px/1.7 ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", Courier, monospace;
+    :root {
+      --fg:#111;
+      --bg:#fff;
+      --muted:rgba(0,0,0,.58);
+      --rule:rgba(0,0,0,.10);
     }
-    main { max-width: 760px; margin: 10vh auto; padding: 0 22px; }
-    h1 {
-  font-size: 22px;
-  font-weight: 400; /* not bold */
-  margin: 18px 0 8px;
-  letter-spacing: .02em;
-}
-    p { margin: 10px 0; }
-    .btn {
-      display: inline-block;
-      border: 1px solid var(--fg);
-      padding: 12px 14px;
-      background: transparent;
-      cursor: pointer;
-      font: inherit;
-      letter-spacing: .2px;
+
+    html, body { height:100%; }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      font:18px/1.7 ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", Courier, monospace;
     }
-    .brand {
-  opacity: .75;
-  letter-spacing: .12em;
-  text-transform: lowercase;
-}
-    .small { font-size: 13px; color: var(--muted); margin-top: 18px; }
-    .rule { margin-top: 28px; }
-    a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 
-main { max-width: 760px; margin: 9vh auto; padding: 0 22px; }
+    main{
+      max-width:760px;
+      margin:9vh auto;
+      padding:0 22px;
+    }
 
-.brand {
-  opacity: .65;
-  letter-spacing: .18em;
-  text-transform: lowercase;
-  margin-bottom: 18px;
-}
+    .brand{
+      opacity:.65;
+      letter-spacing:.18em;
+      text-transform:lowercase;
+      margin-bottom:16px;
+    }
 
-h1 { margin: 0 0 10px; font-size: 22px; font-weight: 400; }
+    .small{
+      font-size:13px;
+      color:var(--muted);
+      margin:10px 0;
+    }
 
-hr {
-  border: 0;
-  height: 1px;
-  background: rgba(0,0,0,.10);
-  margin: 18px 0;
-}
-    
+    hr{
+      border:0;
+      height:1px;
+      background:var(--rule);
+      margin:18px 0;
+    }
+
+    a{
+      color:inherit;
+      text-decoration:underline;
+      text-underline-offset:3px;
+    }
+
+    /* record visual */
+    .record{
+      width:100%;
+      height:180px;
+      margin-top:12px;
+      border:1px solid var(--rule);
+      background:#0b0b0c;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .record::before{
+      content:"";
+      position:absolute;
+      left:50%; top:50%;
+      width:150px; height:150px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      background:
+        radial-gradient(circle at center,
+          rgba(255,255,255,.88) 0 2px,
+          rgba(0,0,0,0) 2px 10px,
+          rgba(255,255,255,.12) 10px 11px,
+          rgba(255,255,255,.07) 11px 13px,
+          rgba(255,255,255,.03) 13px 40px,
+          rgba(255,255,255,.06) 40px 41px,
+          rgba(255,255,255,.03) 41px 75px
+        );
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .record::after{
+      content:"cold moon";
+      position:absolute;
+      left:50%; top:50%;
+      width:52px; height:52px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      font-size:10px;
+      letter-spacing:.12em;
+      text-transform:lowercase;
+      color:rgba(255,255,255,.78);
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.14);
+    }
+
+    @keyframes spin{
+      from{ transform:translate(-50%,-50%) rotate(0); }
+      to{ transform:translate(-50%,-50%) rotate(360deg); }
+    }
+
+    .record.spinning::before{
+      animation:spin 2.2s linear infinite;
+    }
   </style>
 </head>
+
 <body>
   <main>
-    
-<div class="brand">distant bugles</div>
-<p class="small">Music by Steve Ward and friends.</p>
-    
-    <div style="margin: 18px 0;">
-      <hr>
-  <div class="small">now playing: cold moon</div>
-  <audio controls loop preload="none" style="width:100%; margin-top:8px;">
-    <source src="audio/cold_moon_16_44_1_FLAC_export_2026_01_12.flac" type="audio/flac">
-  </audio>
+    <div class="brand">distant bugles</div>
 
-     <canvas id="viz" width="760" height="140" style="width:100%; height:140px; display:block; margin-top:12px; border:1px solid rgba(0,0,0,.15);"></canvas> 
-      
-</div>
+    <p class="small">Music by Steve Ward and friends.</p>
+
+    <hr>
+
+    <div style="margin: 18px 0;">
+      <div class="small">now playing: cold moon</div>
+
+      <audio id="player" controls loop preload="none" style="width:100%; margin-top:8px;">
+        <source src="audio/cold_moon_16_44_1_FLAC_export_2026_01_12.flac" type="audio/flac">
+      </audio>
+
+      <div id="record" class="record" aria-hidden="true"></div>
+    </div>
 
     <p class="small">things will change.</p>
 
-    <div class="rule">
-      <p class="small">if you hear something you want: email me a lyric, a timestamp, or a description.</p>
-    </div>
+    <p class="small">if you hear something you want: email me a lyric, a timestamp, or a description.</p>
 
     <p class="small">
-<a href="https://fauna-flora.bandcamp.com/album/fauna-flora" target="_blank" rel="noopener noreferrer">bandcamp</a>
-<span style="margin: 0 10px;">·</span>
-<a href="mailto:faunafloramusic@gmail.com?subject=Hello">contact</a>
+      <a href="https://fauna-flora.bandcamp.com/album/fauna-flora" target="_blank" rel="noopener noreferrer">bandcamp</a>
+      <span style="margin: 0 10px;">·</span>
+      <a href="mailto:faunafloramusic@gmail.com?subject=Hello">contact</a>
     </p>
   </main>
 
-<script>
-(() => {
-  const audio = document.querySelector("audio");
-  const canvas = document.getElementById("viz");
-  if (!audio || !canvas) return;
+  <script>
+  (() => {
+    const audio = document.getElementById("player");
+    const record = document.getElementById("record");
+    if (!audio || !record) return;
 
-  const ctx2d = canvas.getContext("2d", { alpha: false });
-  const DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-
-  function resize() {
-    const cssW = canvas.clientWidth || 760;
-    const cssH = canvas.clientHeight || 140;
-    canvas.width = Math.floor(cssW * DPR);
-    canvas.height = Math.floor(cssH * DPR);
-  }
-  window.addEventListener("resize", resize);
-  resize();
-
-  let audioCtx, analyser, data, rafId, started = false;
-
-  function ensureAudioGraph() {
-    if (started) return;
-    started = true;
-
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.85;
-
-    const src = audioCtx.createMediaElementSource(audio);
-    src.connect(analyser);
-    analyser.connect(audioCtx.destination);
-
-    data = new Uint8Array(analyser.fftSize);
-  }
-
-  function draw() {
-    rafId = requestAnimationFrame(draw);
-
-    const w = canvas.width;
-    const h = canvas.height;
-
-    // background (subtle “film” feel)
-    ctx2d.fillStyle = "#f6f6f4";
-    ctx2d.fillRect(0, 0, w, h);
-
-    // if not playing, keep it still
-    if (audio.paused || audio.ended) {
-      ctx2d.fillStyle = "rgba(0,0,0,.45)";
-      ctx2d.font = `${14 * DPR}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
-      ctx2d.fillText("press play", 14 * DPR, 28 * DPR);
-      return;
-    }
-
-    analyser.getByteTimeDomainData(data);
-
-    // draw a single, slightly “haunted” waveform
-    ctx2d.lineWidth = 2 * DPR;
-    ctx2d.strokeStyle = "rgba(0,0,0,.75)";
-    ctx2d.beginPath();
-
-    const mid = h * 0.5;
-    const step = w / (data.length - 1);
-
-    for (let i = 0; i < data.length; i++) {
-      const v = (data[i] - 128) / 128;        // -1..1
-      const x = i * step;
-
-      // tiny wobble so it feels alive, not “tech demo”
-      const wobble = Math.sin((Date.now() * 0.002) + i * 0.02) * (2.0 * DPR);
-
-      const y = mid + v * (h * 0.28) + wobble;
-
-      if (i === 0) ctx2d.moveTo(x, y);
-      else ctx2d.lineTo(x, y);
-    }
-
-    ctx2d.stroke();
-
-    // faint scanline texture
-    ctx2d.strokeStyle = "rgba(0,0,0,.05)";
-    ctx2d.lineWidth = 1 * DPR;
-    for (let y = 0; y < h; y += 3 * DPR) {
-      ctx2d.beginPath();
-      ctx2d.moveTo(0, y);
-      ctx2d.lineTo(w, y);
-      ctx2d.stroke();
-    }
-  }
-
-  // iOS/Safari needs a user gesture to start AudioContext
-  audio.addEventListener("play", () => {
-    ensureAudioGraph();
-    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
-    if (!rafId) draw();
-  });
-
-  audio.addEventListener("pause", () => {
-    // keep drawing off if you want absolute stillness:
-    // cancelAnimationFrame(rafId); rafId = null;
-  });
-
-})();
-</script>
-  
+    audio.addEventListener("play",  () => record.classList.add("spinning"));
+    audio.addEventListener("pause", () => record.classList.remove("spinning"));
+    audio.addEventListener("ended", () => record.classList.remove("spinning"));
+  })();
+  </script>
 </body>
 </html>
