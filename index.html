@@ -11,6 +11,12 @@
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
       --rule:rgba(0,0,0,.10);
+
+      /* audio-driven vars (0..1-ish) */
+      --pulse: 0;
+      --groove: .22;   /* groove layer opacity */
+      --shine: .35;    /* highlight intensity */
+      --glow:  0;      /* edge glow intensity */
     }
 
     html,body{height:100%}
@@ -22,50 +28,89 @@
     }
 
     main{max-width:760px;margin:9vh auto;padding:0 22px}
-
     .brand{
       opacity:.75;
       letter-spacing:.18em;
       text-transform:lowercase;
       margin-bottom:14px;
     }
-
     .small{font-size:13px;color:var(--muted);margin:10px 0}
     hr{border:0;height:1px;background:var(--rule);margin:18px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
-    /* ---- RECORD ---- */
+    /* ---------- RECORD ---------- */
     .recordWrap{
       margin-top:14px;
       display:flex;
       justify-content:center;
       align-items:center;
-      /* no “big dumb rectangle” — just breathing room */
+      position:relative;
     }
 
     .disc{
-      /* responsive size: big on desktop, still fits mobile */
       width:min(420px, 92vw);
       aspect-ratio:1 / 1;
       border-radius:50%;
       position:relative;
-      box-shadow: 0 18px 55px rgba(0,0,0,.22);
-      background:
-        /* subtle vignette */
-        radial-gradient(circle at 50% 45%, rgba(255,255,255,.06), rgba(0,0,0,0) 55%),
-        /* grooves */
-        repeating-radial-gradient(circle at center,
-          rgba(255,255,255,.028) 0px,
-          rgba(255,255,255,.028) 1px,
-          rgba(0,0,0,0) 3px,
-          rgba(0,0,0,0) 6px
-        ),
-        /* base vinyl */
-        radial-gradient(circle at center, #2a2a2c 0%, #111114 62%, #0b0b0c 100%);
       overflow:hidden;
+
+      /* subtle “alive” response */
+      filter:
+        contrast(calc(1 + var(--pulse) * .35))
+        brightness(calc(1 + var(--pulse) * .08));
+
+      box-shadow:
+        0 18px 55px rgba(0,0,0,.22),
+        0 0 calc(var(--glow) * 24px) rgba(120, 160, 255, calc(var(--glow) * .25)); /* tiny cool tint */
     }
 
-    /* label */
+    /* base vinyl */
+    .discBase{
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(255,255,255,.05), rgba(0,0,0,0) 55%),
+        radial-gradient(circle at center, #2a2a2c 0%, #111114 62%, #0b0b0c 100%);
+    }
+
+    /* grooves as a separate layer so we can modulate opacity */
+    .discGrooves{
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      opacity: var(--groove);
+      background:
+        repeating-radial-gradient(circle at center,
+          rgba(255,255,255,.06) 0px,
+          rgba(255,255,255,.06) 1px,
+          rgba(0,0,0,0) 3px,
+          rgba(0,0,0,0) 6px
+        );
+      mix-blend-mode: screen;
+    }
+
+    /* rotating highlight (this is what makes the spin obvious) */
+    .discSheen{
+      position:absolute;
+      inset:-35%;
+      border-radius:50%;
+      opacity: var(--shine);
+      background: conic-gradient(
+        from 0deg,
+        rgba(255,255,255,0.00) 0deg,
+        rgba(255,255,255,0.10) 25deg,
+        rgba(255,255,255,0.00) 70deg,
+        rgba(255,255,255,0.00) 180deg,
+        rgba(255,255,255,0.08) 220deg,
+        rgba(255,255,255,0.00) 280deg,
+        rgba(255,255,255,0.00) 360deg
+      );
+      mix-blend-mode: screen;
+      pointer-events:none;
+    }
+
+    /* label + hole */
     .label{
       position:absolute;
       inset:0;
@@ -83,8 +128,6 @@
       justify-content:center;
       align-items:center;
     }
-
-    /* hole */
     .hole{
       width:10%;
       aspect-ratio:1 / 1;
@@ -93,36 +136,37 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
     }
 
-    /* a faint rotating “sheen” so it feels alive */
-    .sheen{
-      position:absolute;
-      inset:-35%;
-      border-radius:50%;
-      background: conic-gradient(
-        from 0deg,
-        rgba(255,255,255,.00),
-        rgba(255,255,255,.06),
-        rgba(255,255,255,.00),
-        rgba(255,255,255,.00)
-      );
-      mix-blend-mode: screen;
-      opacity:.65;
-      pointer-events:none;
-    }
+    @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    .recordWrap.spinning .disc{ animation: spin 2.2s linear infinite; }
 
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
-    }
-
-    /* spin both disc + sheen together */
-    .recordWrap.spinning .disc{
-      animation: spin 2.2s linear infinite;
-    }
-
-    /* Respect “reduce motion” users automatically */
     @media (prefers-reduced-motion: reduce){
-      .recordWrap.spinning .disc{ animation: none; }
+      .recordWrap.spinning .disc{ animation:none; }
+    }
+
+    /* ---------- SPARKS (very restrained) ---------- */
+    .sparks{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    }
+    .spark{
+      position:absolute;
+      width:2px;
+      height:10px;
+      background: rgba(255,255,255,.85);
+      border-radius:2px;
+      filter: blur(.2px);
+      opacity:0;
+      transform-origin: 1px 110px; /* tuned by JS */
+      animation: spark 520ms ease-out forwards;
+    }
+    @keyframes spark{
+      0%   { opacity:0; transform: translate(0,0) rotate(var(--ang)) scaleY(.6); }
+      15%  { opacity:.9; }
+      100% { opacity:0; transform: translate(var(--dx), var(--dy)) rotate(var(--ang)) scaleY(1.2); }
     }
   </style>
 </head>
@@ -142,10 +186,13 @@
       </audio>
 
       <div id="recordWrap" class="recordWrap" aria-hidden="true">
-        <div class="disc">
-          <div class="sheen"></div>
+        <div id="disc" class="disc">
+          <div class="discBase"></div>
+          <div class="discGrooves"></div>
+          <div class="discSheen"></div>
           <div class="label"><div class="hole"></div></div>
         </div>
+        <div id="sparks" class="sparks"></div>
       </div>
     </div>
 
@@ -163,19 +210,114 @@
   (() => {
     const audio = document.getElementById("player");
     const wrap  = document.getElementById("recordWrap");
-    if (!audio || !wrap) return;
+    const disc  = document.getElementById("disc");
+    const sparks = document.getElementById("sparks");
+    if (!audio || !wrap || !disc || !sparks) return;
 
-    const start = () => wrap.classList.add("spinning");
-    const stop  = () => wrap.classList.remove("spinning");
+    // spin start/stop (reliable)
+    const startSpin = () => wrap.classList.add("spinning");
+    const stopSpin  = () => wrap.classList.remove("spinning");
+    audio.addEventListener("playing", startSpin);
+    audio.addEventListener("play", startSpin);
+    audio.addEventListener("pause", stopSpin);
+    audio.addEventListener("ended", stopSpin);
 
-    // more reliable than "play" alone in some browsers
-    audio.addEventListener("playing", start);
-    audio.addEventListener("play", start);
-    audio.addEventListener("pause", stop);
-    audio.addEventListener("ended", stop);
+    // audio-reactive pulse
+    let audioCtx, analyser, data, rafId, started = false;
+    let lastSparkAt = 0;
 
-    // if already playing (rare), sync state
-    if (!audio.paused && !audio.ended) start();
+    function ensureAudioGraph(){
+      if (started) return;
+      started = true;
+
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.85;
+
+      const src = audioCtx.createMediaElementSource(audio);
+      src.connect(analyser);
+      analyser.connect(audioCtx.destination);
+
+      data = new Uint8Array(analyser.frequencyBinCount);
+    }
+
+    function spawnSpark(strength){
+      const now = performance.now();
+      if (now - lastSparkAt < 260) return; // limit frequency
+      lastSparkAt = now;
+
+      // 0..1 -> chance
+      if (Math.random() > Math.min(0.55, strength * 0.8)) return;
+
+      const s = document.createElement("div");
+      s.className = "spark";
+
+      // random point near edge of disc
+      const ang = (Math.random() * Math.PI * 2);
+      const r = 170 + Math.random() * 20; // radius-ish in px; fine because we animate absolute
+      const x = Math.cos(ang) * r;
+      const y = Math.sin(ang) * r;
+
+      // travel outward
+      const dx = (Math.cos(ang) * (18 + Math.random()*22)).toFixed(1) + "px";
+      const dy = (Math.sin(ang) * (18 + Math.random()*22)).toFixed(1) + "px";
+
+      // place relative to center of recordWrap
+      s.style.left = "50%";
+      s.style.top  = "50%";
+      s.style.transform = `translate(${x}px, ${y}px) rotate(${ang}rad)`;
+      s.style.setProperty("--ang", ang + "rad");
+      s.style.setProperty("--dx", dx);
+      s.style.setProperty("--dy", dy);
+
+      // scale spark brightness slightly by strength
+      s.style.opacity = 0;
+      s.style.height = (8 + strength * 12) + "px";
+
+      sparks.appendChild(s);
+      setTimeout(() => s.remove(), 700);
+    }
+
+    function tick(){
+      rafId = requestAnimationFrame(tick);
+
+      if (audio.paused || audio.ended) {
+        // when paused: keep it still and dark
+        document.documentElement.style.setProperty("--pulse", 0);
+        document.documentElement.style.setProperty("--groove", .22);
+        document.documentElement.style.setProperty("--shine", .28);
+        document.documentElement.style.setProperty("--glow", 0);
+        return;
+      }
+
+      analyser.getByteFrequencyData(data);
+
+      // average energy, weighted toward lows/mids for “beat”
+      let sum = 0;
+      const n = data.length;
+      const lowEnd = Math.floor(n * 0.25);
+      for (let i = 0; i < lowEnd; i++) sum += data[i];
+      const avg = sum / lowEnd; // 0..255-ish
+
+      // normalize to 0..1
+      const pulse = Math.min(1, Math.max(0, (avg - 18) / 120));
+
+      // drive CSS vars
+      document.documentElement.style.setProperty("--pulse", pulse.toFixed(3));
+      document.documentElement.style.setProperty("--groove", (0.18 + pulse * 0.38).toFixed(3));
+      document.documentElement.style.setProperty("--shine", (0.22 + pulse * 0.55).toFixed(3));
+      document.documentElement.style.setProperty("--glow",  (pulse * 0.85).toFixed(3));
+
+      // sparks only on bigger peaks
+      if (pulse > 0.55) spawnSpark(pulse);
+    }
+
+    audio.addEventListener("play", () => {
+      ensureAudioGraph();
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+      if (!rafId) tick();
+    });
   })();
   </script>
 </body>
