@@ -11,9 +11,7 @@
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
       --rule:rgba(0,0,0,.10);
-
-      /* 0..1 progress used for tonearm */
-      --p: 0;
+      --p: 0; /* 0..1 progress */
     }
 
     html,body{height:100%}
@@ -29,16 +27,20 @@
     hr{border:0;height:1px;background:var(--rule);margin:18px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
-    /* ---------- RECORD + ARM STAGE ---------- */
+    /* ---------- STAGE ---------- */
     .stage{
       margin-top:14px;
       display:flex;
       justify-content:center;
       align-items:center;
       gap:28px;
-      user-select:none;
+      position:relative;
+    }
+    @media (max-width: 720px){
+      .stage{flex-direction:column; gap:16px;}
     }
 
+    /* ---------- RECORD ---------- */
     .disc{
       width:min(420px, 86vw);
       aspect-ratio:1/1;
@@ -47,48 +49,25 @@
       overflow:hidden;
       box-shadow: 0 18px 55px rgba(0,0,0,.22);
     }
-
     .discBase{
       position:absolute; inset:0; border-radius:50%;
       background:
         radial-gradient(circle at 50% 45%, rgba(255,255,255,.05), rgba(0,0,0,0) 55%),
         radial-gradient(circle at center, #2a2a2c 0%, #111114 62%, #0b0b0c 100%);
     }
-
-    .discDeadwax{
-      position:absolute; inset:0; border-radius:50%;
-      background: radial-gradient(circle at center,
-        rgba(255,255,255,.00) 0 24%,
-        rgba(255,255,255,.06) 24% 26%,
-        rgba(255,255,255,.03) 26% 30%,
-        rgba(255,255,255,.00) 30% 100%
-      );
-      mix-blend-mode: screen;
-      opacity: .35;
-      pointer-events:none;
-    }
-
     .discGrooves{
       position:absolute; inset:0; border-radius:50%;
-      opacity: .24;
-      background:
-        repeating-radial-gradient(circle at center,
-          rgba(255,255,255,.06) 0px,
-          rgba(255,255,255,.06) 1px,
-          rgba(0,0,0,0) 3px,
-          rgba(0,0,0,0) 6px
-        );
+      opacity:.24;
+      background: repeating-radial-gradient(circle at center,
+        rgba(255,255,255,.06) 0px,
+        rgba(255,255,255,.06) 1px,
+        rgba(0,0,0,0) 3px,
+        rgba(0,0,0,0) 6px
+      );
       mix-blend-mode: screen;
-      -webkit-mask-image: radial-gradient(circle at center,
-        transparent 0 28%,
-        #000 30% 100%
-      );
-      mask-image: radial-gradient(circle at center,
-        transparent 0 28%,
-        #000 30% 100%
-      );
+      -webkit-mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
+      mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
     }
-
     .discSheen{
       position:absolute; inset:-35%;
       border-radius:50%;
@@ -106,7 +85,6 @@
       mix-blend-mode: screen;
       pointer-events:none;
     }
-
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -119,9 +97,7 @@
       );
       border: 1px solid rgba(255,255,255,.10);
       box-shadow: inset 0 0 0 6px rgba(0,0,0,.18);
-      display:flex;
-      justify-content:center;
-      align-items:center;
+      display:flex; justify-content:center; align-items:center;
     }
     .hole{
       width:28%;
@@ -134,93 +110,87 @@
     @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
     .spinning .disc{ animation: spin 2.2s linear infinite; }
 
-    @media (max-width: 720px){
-      .stage{flex-direction:column; gap:16px;}
-    }
-
-    /* ---------- TONEARM (simple, disembodied) ---------- */
+    /* ---------- TONEARM (fixed geometry) ---------- */
     .armWrap{
-      width:160px;
-      height:260px;
+      width:220px;
+      height:220px;
       position:relative;
     }
 
     /* pivot base */
     .pivot{
       position:absolute;
-      right:12px;
-      top:26px;
-      width:26px;
-      height:26px;
+      right:20px;
+      top:30px;
+      width:28px;
+      height:28px;
       border-radius:50%;
-      background: rgba(0,0,0,.12);
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+      background: rgba(0,0,0,.10);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.20);
     }
     .pivot::after{
       content:"";
       position:absolute;
-      inset:7px;
+      inset:8px;
       border-radius:50%;
       background: rgba(0,0,0,.35);
     }
 
-    /* the arm */
-    .arm{
+    /* arm “assembly”: we translate it inward (onto the record) + slight rotation */
+    .armAssembly{
       position:absolute;
-      right:25px;
-      top:39px;
-      width:170px;
-      height:10px;
-      transform-origin: 162px 5px; /* near pivot */
-      transform: rotate(calc(-22deg + (var(--p) * 18deg)));
+      right:34px;
+      top:44px;
+      width:190px;
+      height:24px;
+
+      /* key part: pull it left as the song progresses so stylus goes inward */
+      transform:
+        translateX(calc(-38px - (var(--p) * 44px)))
+        rotate(calc(-16deg + (var(--p) * 12deg)));
+
+      transform-origin: 190px 12px; /* near pivot end */
       transition: transform 80ms linear;
     }
 
-    .arm::before{
-      content:"";
+    /* the arm tube */
+    .armTube{
       position:absolute;
-      left:0;
-      top:4px;
+      left:16px;
+      top:11px;
       width:165px;
       height:2px;
       background: rgba(0,0,0,.55);
       box-shadow: 0 0 0 1px rgba(0,0,0,.10);
     }
 
-    /* cartridge at the end */
+    /* cartridge near stylus end */
     .cartridge{
       position:absolute;
       left:0;
-      top:0;
+      top:7px;
       width:18px;
       height:10px;
       background: rgba(0,0,0,.55);
       border-radius:2px;
     }
 
-    /* tiny red stylus tip */
     .stylus{
       position:absolute;
       left:-3px;
-      top:6px;
-      width:6px;
+      top:14px;
+      width:7px;
       height:3px;
-      background: #b01818;
+      background:#b01818;
       border-radius:2px;
       box-shadow: 0 0 0 1px rgba(0,0,0,.10);
     }
 
-    /* optional micro “tracking wobble” when playing */
-    .spinning .arm{
-      animation: wobble 1.1s ease-in-out infinite;
+    /* tiny “tracking” micro movement only while playing */
+    .spinning .armAssembly{
+      filter: brightness(1.02);
     }
-    @keyframes wobble{
-      0%,100%{ filter:none; }
-      50%{ filter:brightness(1.03); }
-    }
-    @media (prefers-reduced-motion: reduce){
-      .spinning .arm{ animation:none; }
-    }
+
   </style>
 </head>
 
@@ -239,9 +209,8 @@
       </audio>
 
       <div id="wrap" class="stage" aria-hidden="true">
-        <div id="disc" class="disc">
+        <div class="disc">
           <div class="discBase"></div>
-          <div class="discDeadwax"></div>
           <div class="discGrooves"></div>
           <div class="discSheen"></div>
           <div class="label"><div class="hole"></div></div>
@@ -249,8 +218,9 @@
 
         <div class="armWrap">
           <div class="pivot"></div>
-          <div id="arm" class="arm">
+          <div class="armAssembly">
             <div class="cartridge"></div>
+            <div class="armTube"></div>
             <div class="stylus"></div>
           </div>
         </div>
@@ -274,7 +244,6 @@
     if (!audio || !wrap) return;
 
     const setProgress = (p) => {
-      // clamp 0..1
       const v = Math.max(0, Math.min(1, p || 0));
       document.documentElement.style.setProperty("--p", v.toFixed(4));
     };
@@ -287,14 +256,10 @@
     audio.addEventListener("pause", stop);
     audio.addEventListener("ended", () => { stop(); setProgress(0); });
 
-    // move tonearm inward as the track plays
     audio.addEventListener("timeupdate", () => {
       if (!audio.duration || !isFinite(audio.duration)) return;
       setProgress(audio.currentTime / audio.duration);
     });
-
-    // initialize if already mid-track
-    if (!audio.paused && !audio.ended) start();
   })();
   </script>
 </body>
