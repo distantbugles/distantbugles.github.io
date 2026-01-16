@@ -11,7 +11,6 @@
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
       --rule:rgba(0,0,0,.10);
-      --p: 0; /* 0..1 progress */
     }
 
     html,body{height:100%}
@@ -21,40 +20,56 @@
       color:var(--fg);
       font:18px/1.7 ui-monospace,"SF Mono",Menlo,Monaco,Consolas,"Liberation Mono","Courier New",Courier,monospace;
     }
-    main{max-width:760px;margin:9vh auto;padding:0 22px}
-    .brand{opacity:.75;letter-spacing:.18em;text-transform:lowercase;margin-bottom:14px}
+
+    /* tighter, more “square island” */
+    main{
+      max-width:560px;
+      margin:9vh auto;
+      padding:0 22px;
+    }
+
+    .brand{
+      opacity:.75;
+      letter-spacing:.18em;
+      text-transform:lowercase;
+      margin-bottom:14px;
+    }
+
     .small{font-size:13px;color:var(--muted);margin:10px 0}
     hr{border:0;height:1px;background:var(--rule);margin:18px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
-    /* ---------- STAGE ---------- */
+    /* --- SQUARE STAGE (record inside a square) --- */
     .stage{
-      margin-top:14px;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      gap:28px;
+      margin:18px 0 8px;
+      width:100%;
+      aspect-ratio: 1 / 1;
+      border:1px solid var(--rule);
+      background:#f7f7f6;
       position:relative;
-    }
-    @media (max-width: 720px){
-      .stage{flex-direction:column; gap:16px;}
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+      box-shadow: 0 10px 28px rgba(0,0,0,.06);
     }
 
-    /* ---------- RECORD ---------- */
+    /* record */
     .disc{
-      width:min(420px, 86vw);
+      width:88%;
       aspect-ratio:1/1;
       border-radius:50%;
       position:relative;
       overflow:hidden;
       box-shadow: 0 18px 55px rgba(0,0,0,.22);
     }
+
     .discBase{
       position:absolute; inset:0; border-radius:50%;
       background:
         radial-gradient(circle at 50% 45%, rgba(255,255,255,.05), rgba(0,0,0,0) 55%),
         radial-gradient(circle at center, #2a2a2c 0%, #111114 62%, #0b0b0c 100%);
     }
+
     .discGrooves{
       position:absolute; inset:0; border-radius:50%;
       opacity:.24;
@@ -68,6 +83,7 @@
       -webkit-mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
       mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
     }
+
     .discSheen{
       position:absolute; inset:-35%;
       border-radius:50%;
@@ -85,6 +101,7 @@
       mix-blend-mode: screen;
       pointer-events:none;
     }
+
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -99,6 +116,7 @@
       box-shadow: inset 0 0 0 6px rgba(0,0,0,.18);
       display:flex; justify-content:center; align-items:center;
     }
+
     .hole{
       width:28%;
       aspect-ratio:1/1;
@@ -108,89 +126,58 @@
     }
 
     @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
-    .spinning .disc{ animation: spin 2.2s linear infinite; }
+    .stage.spinning .disc{ animation: spin 2.2s linear infinite; }
 
-    /* ---------- TONEARM (fixed geometry) ---------- */
-    .armWrap{
-      width:220px;
-      height:220px;
-      position:relative;
+    @media (prefers-reduced-motion: reduce){
+      .stage.spinning .disc{ animation:none; }
     }
 
-    /* pivot base */
-    .pivot{
+    /* --- minimal “turntable” control button (bottom-right) --- */
+    .controls{
       position:absolute;
-      right:20px;
-      top:30px;
-      width:28px;
-      height:28px;
+      right:14px;
+      bottom:14px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .btn{
+      appearance:none;
+      border:1px solid rgba(0,0,0,.20);
+      background: rgba(255,255,255,.80);
+      color: rgba(0,0,0,.78);
+      padding:10px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      font: 12px/1 ui-monospace,"SF Mono",Menlo,Monaco,Consolas,"Liberation Mono","Courier New",Courier,monospace;
+      letter-spacing:.10em;
+      text-transform:lowercase;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      user-select:none;
+    }
+
+    .btn:active{ transform: translateY(1px); }
+
+    /* tiny red indicator (your “one pop of color”) */
+    .led{
+      width:8px;
+      height:8px;
       border-radius:50%;
-      background: rgba(0,0,0,.10);
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.20);
-    }
-    .pivot::after{
-      content:"";
-      position:absolute;
-      inset:8px;
-      border-radius:50%;
-      background: rgba(0,0,0,.35);
+      background: rgba(176,24,24,.35);
+      box-shadow: 0 0 0 1px rgba(0,0,0,.12);
     }
 
-    /* arm “assembly”: we translate it inward (onto the record) + slight rotation */
-    .armAssembly{
-      position:absolute;
-      right:34px;
-      top:44px;
-      width:190px;
-      height:24px;
-
-      /* key part: pull it left as the song progresses so stylus goes inward */
-      transform:
-        translateX(calc(-38px - (var(--p) * 44px)))
-        rotate(calc(-16deg + (var(--p) * 12deg)));
-
-      transform-origin: 190px 12px; /* near pivot end */
-      transition: transform 80ms linear;
+    .stage.spinning .led{
+      background: rgba(176,24,24,.95);
+      box-shadow: 0 0 10px rgba(176,24,24,.35);
     }
 
-    /* the arm tube */
-    .armTube{
-      position:absolute;
-      left:16px;
-      top:11px;
-      width:165px;
-      height:2px;
-      background: rgba(0,0,0,.55);
-      box-shadow: 0 0 0 1px rgba(0,0,0,.10);
-    }
-
-    /* cartridge near stylus end */
-    .cartridge{
-      position:absolute;
-      left:0;
-      top:7px;
-      width:18px;
-      height:10px;
-      background: rgba(0,0,0,.55);
-      border-radius:2px;
-    }
-
-    .stylus{
-      position:absolute;
-      left:-3px;
-      top:14px;
-      width:7px;
-      height:3px;
-      background:#b01818;
-      border-radius:2px;
-      box-shadow: 0 0 0 1px rgba(0,0,0,.10);
-    }
-
-    /* tiny “tracking” micro movement only while playing */
-    .spinning .armAssembly{
-      filter: brightness(1.02);
-    }
-
+    /* hide the native audio UI completely */
+    audio{ display:none; }
   </style>
 </head>
 
@@ -201,29 +188,21 @@
     <p class="small">Music by Steve Ward and friends.</p>
     <hr>
 
-    <div style="margin:18px 0;">
-      <div class="small">now playing: cold moon</div>
+    <p class="small">now playing: cold moon</p>
 
-      <audio id="player" controls loop preload="none" style="width:100%; margin-top:8px;">
-        <source src="audio/cold_moon_16_44_1_FLAC_export_2026_01_12.flac" type="audio/flac">
-      </audio>
+    <div id="stage" class="stage" aria-label="player">
+      <div id="disc" class="disc" aria-hidden="true">
+        <div class="discBase"></div>
+        <div class="discGrooves"></div>
+        <div class="discSheen"></div>
+        <div class="label"><div class="hole"></div></div>
+      </div>
 
-      <div id="wrap" class="stage" aria-hidden="true">
-        <div class="disc">
-          <div class="discBase"></div>
-          <div class="discGrooves"></div>
-          <div class="discSheen"></div>
-          <div class="label"><div class="hole"></div></div>
-        </div>
-
-        <div class="armWrap">
-          <div class="pivot"></div>
-          <div class="armAssembly">
-            <div class="cartridge"></div>
-            <div class="armTube"></div>
-            <div class="stylus"></div>
-          </div>
-        </div>
+      <div class="controls">
+        <button id="toggle" class="btn" type="button" aria-label="play or stop">
+          <span class="led" aria-hidden="true"></span>
+          <span id="btnText">start</span>
+        </button>
       </div>
     </div>
 
@@ -235,31 +214,48 @@
       <span style="margin:0 10px;">·</span>
       <a href="mailto:faunafloramusic@gmail.com?subject=Hello">contact</a>
     </p>
+
+    <audio id="player" preload="none">
+      <source src="audio/cold_moon_16_44_1_FLAC_export_2026_01_12.flac" type="audio/flac">
+    </audio>
   </main>
 
   <script>
   (() => {
     const audio = document.getElementById("player");
-    const wrap  = document.getElementById("wrap");
-    if (!audio || !wrap) return;
+    const stage = document.getElementById("stage");
+    const btn   = document.getElementById("toggle");
+    const text  = document.getElementById("btnText");
 
-    const setProgress = (p) => {
-      const v = Math.max(0, Math.min(1, p || 0));
-      document.documentElement.style.setProperty("--p", v.toFixed(4));
+    if (!audio || !stage || !btn || !text) return;
+
+    const setUI = () => {
+      const playing = !audio.paused && !audio.ended;
+      stage.classList.toggle("spinning", playing);
+      text.textContent = playing ? "stop" : "start";
+      btn.setAttribute("aria-label", playing ? "stop" : "start");
     };
 
-    const start = () => wrap.classList.add("spinning");
-    const stop  = () => wrap.classList.remove("spinning");
-
-    audio.addEventListener("playing", start);
-    audio.addEventListener("play", start);
-    audio.addEventListener("pause", stop);
-    audio.addEventListener("ended", () => { stop(); setProgress(0); });
-
-    audio.addEventListener("timeupdate", () => {
-      if (!audio.duration || !isFinite(audio.duration)) return;
-      setProgress(audio.currentTime / audio.duration);
+    btn.addEventListener("click", async () => {
+      try{
+        if (audio.paused || audio.ended) {
+          await audio.play();
+        } else {
+          audio.pause();
+          audio.currentTime = 0; // “stop” feel (resets to beginning)
+        }
+      } catch(e) {
+        // if autoplay policy blocks, user can click again; no big UX drama
+      }
+      setUI();
     });
+
+    audio.addEventListener("playing", setUI);
+    audio.addEventListener("pause", setUI);
+    audio.addEventListener("ended", setUI);
+
+    // initial state
+    setUI();
   })();
   </script>
 </body>
