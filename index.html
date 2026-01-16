@@ -10,7 +10,7 @@
       --fg:#111;
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
-      --rule:rgba(0,0,0,.10);
+      --red: #b01818;
     }
 
     html,body{height:100%}
@@ -35,18 +35,20 @@
     }
 
     .small{font-size:13px;color:var(--muted);margin:10px 0}
-    hr{border:0;height:1px;background:var(--rule);margin:18px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
-    /* --- STAGE (layout only; no visible box) --- */
+    /* --- STAGE: invisible container, no box, no shading --- */
     .stage{
       margin:18px auto 10px;
       width:100%;
       aspect-ratio: 1 / 1;
       position:relative;
-      overflow:hidden;
       display:grid;
       place-items:center;
+      background:transparent;
+      border:none;
+      box-shadow:none;
+      overflow:visible; /* important: no “square shading” / no clipping */
     }
 
     /* record */
@@ -128,12 +130,12 @@
       .stage.spinning .disc{ animation:none; }
     }
 
-    /* --- Bottom-right info (inside footprint) --- */
+    /* --- Now playing: bottom-left --- */
     .np{
       position:absolute;
-      right:14px;
-      bottom:58px;
-      text-align:right;
+      left:14px;
+      bottom:14px;
+      text-align:left;
       user-select:none;
     }
     .npLabel{
@@ -141,59 +143,54 @@
       color:var(--muted);
       letter-spacing:.06em;
       text-transform:lowercase;
+      margin:0;
     }
     .npTitle{
-      margin-top:4px;
+      margin-top:2px;          /* tighter */
       font-size:14px;
       color:rgba(0,0,0,.78);
       letter-spacing:.10em;
       text-transform:lowercase;
     }
 
-    /* --- Minimal power button (no words) --- */
+    /* --- Power button: bigger + red accent when playing --- */
     .controls{
       position:absolute;
       right:14px;
       bottom:14px;
       display:flex;
       align-items:center;
-      gap:10px;
       user-select:none;
     }
 
     .powerBtn{
       appearance:none;
       border:1px solid rgba(0,0,0,.18);
-      background: rgba(255,255,255,.85);
+      background: rgba(255,255,255,.88);
       border-radius:999px;
-      width:44px;
-      height:44px;
+      width:54px;
+      height:54px;
       display:grid;
       place-items:center;
       cursor:pointer;
-      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      box-shadow: 0 8px 22px rgba(0,0,0,.10);
     }
     .powerBtn:active{ transform: translateY(1px); }
 
-    .led{
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background: rgba(176,24,24,.35);
-      box-shadow: 0 0 0 1px rgba(0,0,0,.10);
-      position:absolute;
-      left:-2px;
-      top:-2px;
-    }
-    .stage.spinning .led{
-      background: rgba(176,24,24,.95);
-      box-shadow: 0 0 10px rgba(176,24,24,.28);
+    .powerIcon{
+      width:18px;
+      height:18px;
+      opacity:.80;
+      color: rgba(0,0,0,.70);
     }
 
-    .powerIcon{
-      width:16px;
-      height:16px;
-      opacity:.70;
+    .stage.spinning .powerBtn{
+      border-color: rgba(176,24,24,.38);
+    }
+    .stage.spinning .powerIcon{
+      color: var(--red);
+      opacity:.95;
+      filter: drop-shadow(0 0 6px rgba(176,24,24,.20));
     }
 
     /* Hide native audio UI completely */
@@ -205,8 +202,7 @@
   <main>
     <div class="brand">distant bugles</div>
 
-    <p class="small">music by Steve Ward and friends.</p>
-    <hr>
+    <p class="small">music by Steve Ward and friends</p>
 
     <div id="stage" class="stage" aria-label="player">
       <div class="disc" aria-hidden="true">
@@ -223,8 +219,6 @@
 
       <div class="controls">
         <button id="toggle" class="powerBtn" type="button" aria-label="play or pause">
-          <span class="led" aria-hidden="true"></span>
-          <!-- simple power glyph -->
           <svg class="powerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 2v9"></path>
             <path d="M7.5 4.8a8 8 0 1 0 9 0"></path>
@@ -252,7 +246,6 @@
     const audio = document.getElementById("player");
     const stage = document.getElementById("stage");
     const btn   = document.getElementById("toggle");
-
     if (!audio || !stage || !btn) return;
 
     const setUI = () => {
@@ -264,9 +257,9 @@
     btn.addEventListener("click", async () => {
       try{
         if (audio.paused || audio.ended) {
-          await audio.play();      // resume/start
+          await audio.play();  // resume/start
         } else {
-          audio.pause();           // pause (do NOT reset time)
+          audio.pause();       // pause (no reset)
         }
       } catch(e) {}
       setUI();
