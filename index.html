@@ -29,7 +29,6 @@
       padding:0 22px;
     }
 
-    /* CENTER THE TOP */
     .brand{
       opacity:.75;
       letter-spacing:.18em;
@@ -48,7 +47,6 @@
     .small{font-size:13px;color:var(--muted);margin:10px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
-    /* PANEL AROUND RECORD (subtle plinth) */
     .panel{
       background:var(--panel);
       border-radius:18px;
@@ -58,7 +56,6 @@
         inset 0 0 0 1px rgba(0,0,0,.06);
     }
 
-    /* stage is layout only */
     .stage{
       width:100%;
       aspect-ratio: 1 / 1;
@@ -68,7 +65,6 @@
       overflow:visible;
     }
 
-    /* record */
     .disc{
       width:86%;
       aspect-ratio:1/1;
@@ -147,7 +143,6 @@
       .stage.spinning .disc{ animation:none; }
     }
 
-    /* now playing (inside panel) */
     .np{
       margin-top:16px;
       display:flex;
@@ -175,6 +170,12 @@
       text-transform:lowercase;
     }
 
+    /* NEW: optical alignment nudge so italics "feel" flush left */
+    .npLabel span{
+      display:inline-block;
+      transform: translateX(.35ch);
+    }
+
     .npTitle{
       margin-top:2px;
       font-size:16px;
@@ -183,9 +184,8 @@
       text-transform:lowercase;
     }
 
-    /* NEW: timer under title (small + italic + tighter spacing) */
     .npTime{
-      margin-top:1px; /* tighter than the title spacing */
+      margin-top:1px;
       font-size:13px;
       color:rgba(0,0,0,.45);
       font-style: italic;
@@ -193,7 +193,6 @@
       text-transform:lowercase;
     }
 
-    /* power button */
     .powerBtn{
       appearance:none;
       border:1px solid rgba(0,0,0,.18);
@@ -217,13 +216,11 @@
       transition: color 200ms ease, filter 200ms ease;
     }
 
-    /* obvious red when playing */
     .stage.spinning ~ .np .powerIcon{
       color: var(--red);
       filter: drop-shadow(0 0 7px rgba(176,24,24,.25));
     }
 
-    /* footer spacing from panel */
     .footer{
       margin-top:18px;
       text-align:left;
@@ -232,7 +229,6 @@
       text-align:center;
     }
 
-    /* Hide native audio UI */
     audio{ display:none; }
   </style>
 </head>
@@ -254,7 +250,7 @@
 
       <div class="np">
         <div class="npText" aria-hidden="true">
-          <div class="npLabel">now playing:</div>
+          <div class="npLabel"><span>now playing:</span></div>
           <div class="npTitle" id="trackTitle">cold moon</div>
           <div class="npTime" id="trackTime">0:00 / 0:00</div>
         </div>
