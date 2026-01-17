@@ -10,7 +10,9 @@
       --fg:#111;
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
-      --red: #b01818;
+      --rule:rgba(0,0,0,.10);
+      --panel:#f6f6f4;
+      --red:#b01818;
     }
 
     html,body{height:100%}
@@ -27,33 +29,48 @@
       padding:0 22px;
     }
 
+    /* CENTER THE TOP */
     .brand{
       opacity:.75;
       letter-spacing:.18em;
       text-transform:lowercase;
-      margin-bottom:14px;
+      margin-bottom:10px;
+      text-align:center;
+    }
+
+    .byline{
+      text-align:center;
+      margin:0 0 18px;
+      font-size:13px;
+      color:var(--muted);
     }
 
     .small{font-size:13px;color:var(--muted);margin:10px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
-    /* --- STAGE: invisible container, no box, no shading --- */
+    /* PANEL AROUND RECORD (subtle plinth) */
+    .panel{
+      background:var(--panel);
+      border-radius:18px;
+      padding:22px 18px 18px;
+      box-shadow:
+        0 16px 40px rgba(0,0,0,.06),
+        inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+
+    /* stage is layout only */
     .stage{
-      margin:18px auto 10px;
       width:100%;
       aspect-ratio: 1 / 1;
       position:relative;
       display:grid;
       place-items:center;
-      background:transparent;
-      border:none;
-      box-shadow:none;
-      overflow:visible; /* important: no “square shading” / no clipping */
+      overflow:visible;
     }
 
     /* record */
     .disc{
-      width:88%;
+      width:86%;
       aspect-ratio:1/1;
       border-radius:50%;
       position:relative;
@@ -130,70 +147,81 @@
       .stage.spinning .disc{ animation:none; }
     }
 
-    /* --- Now playing: bottom-left --- */
+    /* now playing (inside panel, aligned like footer) */
     .np{
-      position:absolute;
-      left:14px;
-      bottom:14px;
-      text-align:left;
-      user-select:none;
+      margin-top:16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:14px;
     }
+
+    .npText{
+      opacity:0;
+      transform: translateY(4px);
+      transition: opacity 260ms ease, transform 260ms ease;
+    }
+
+    .stage.spinning ~ .np .npText{
+      opacity:1;
+      transform: translateY(0);
+    }
+
     .npLabel{
-      font-size:12px;
+      font-size:13px;           /* match footer size */
       color:var(--muted);
       letter-spacing:.06em;
       text-transform:lowercase;
-      margin:0;
     }
+
     .npTitle{
-      margin-top:2px;          /* tighter */
-      font-size:14px;
+      margin-top:2px;
+      font-size:16px;           /* slightly bigger, but not huge */
       color:rgba(0,0,0,.78);
-      letter-spacing:.10em;
+      letter-spacing:.12em;
       text-transform:lowercase;
     }
 
-    /* --- Power button: bigger + red accent when playing --- */
-    .controls{
-      position:absolute;
-      right:14px;
-      bottom:14px;
-      display:flex;
-      align-items:center;
-      user-select:none;
-    }
-
+    /* power button */
     .powerBtn{
       appearance:none;
       border:1px solid rgba(0,0,0,.18);
-      background: rgba(255,255,255,.88);
+      background: rgba(255,255,255,.92);
       border-radius:999px;
-      width:54px;
-      height:54px;
+      width:56px;
+      height:56px;
       display:grid;
       place-items:center;
       cursor:pointer;
       box-shadow: 0 8px 22px rgba(0,0,0,.10);
+      flex:0 0 auto;
     }
     .powerBtn:active{ transform: translateY(1px); }
 
     .powerIcon{
-      width:18px;
-      height:18px;
-      opacity:.80;
+      width:20px;
+      height:20px;
+      opacity:.85;
       color: rgba(0,0,0,.70);
+      transition: color 200ms ease, filter 200ms ease;
     }
 
-    .stage.spinning .powerBtn{
-      border-color: rgba(176,24,24,.38);
-    }
-    .stage.spinning .powerIcon{
+    /* obvious red when playing */
+    .stage.spinning ~ .np .powerIcon{
       color: var(--red);
-      opacity:.95;
-      filter: drop-shadow(0 0 6px rgba(176,24,24,.20));
+      filter: drop-shadow(0 0 7px rgba(176,24,24,.25));
     }
 
-    /* Hide native audio UI completely */
+    /* footer spacing from panel */
+    .footer{
+      margin-top:18px;
+      text-align:left;
+    }
+    .footerCenter{
+      text-align:center;
+    }
+
+    /* Hide native audio UI */
     audio{ display:none; }
   </style>
 </head>
@@ -201,25 +229,26 @@
 <body>
   <main>
     <div class="brand">distant bugles</div>
+    <p class="byline">music by Steve Ward and friends</p>
 
-    <p class="small">music by Steve Ward and friends</p>
-
-    <div id="stage" class="stage" aria-label="player">
-      <div class="disc" aria-hidden="true">
-        <div class="discBase"></div>
-        <div class="discGrooves"></div>
-        <div class="discSheen"></div>
-        <div class="label"><div class="hole"></div></div>
+    <div class="panel">
+      <div id="stage" class="stage" aria-label="player">
+        <div class="disc" aria-hidden="true">
+          <div class="discBase"></div>
+          <div class="discGrooves"></div>
+          <div class="discSheen"></div>
+          <div class="label"><div class="hole"></div></div>
+        </div>
       </div>
 
-      <div class="np" aria-hidden="true">
-        <div class="npLabel">now playing:</div>
-        <div class="npTitle" id="trackTitle">cold moon</div>
-      </div>
+      <div class="np">
+        <div class="npText" aria-hidden="true">
+          <div class="npLabel">now playing:</div>
+          <div class="npTitle" id="trackTitle">cold moon</div>
+        </div>
 
-      <div class="controls">
         <button id="toggle" class="powerBtn" type="button" aria-label="play or pause">
-          <svg class="powerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg class="powerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 2v9"></path>
             <path d="M7.5 4.8a8 8 0 1 0 9 0"></path>
           </svg>
@@ -227,14 +256,16 @@
       </div>
     </div>
 
-    <p class="small">things will change.</p>
-    <p class="small">if you hear something you want: email me a lyric, a timestamp, or a description.</p>
+    <div class="footer">
+      <p class="small footerCenter">things will change.</p>
+      <p class="small">if you hear something you want: email me a lyric, a timestamp, or a description.</p>
 
-    <p class="small">
-      <a href="https://fauna-flora.bandcamp.com/album/fauna-flora" target="_blank" rel="noopener noreferrer">bandcamp</a>
-      <span style="margin:0 10px;">·</span>
-      <a href="mailto:faunafloramusic@gmail.com?subject=Hello">contact</a>
-    </p>
+      <p class="small">
+        <a href="https://fauna-flora.bandcamp.com/album/fauna-flora" target="_blank" rel="noopener noreferrer">bandcamp</a>
+        <span style="margin:0 10px;">·</span>
+        <a href="mailto:faunafloramusic@gmail.com?subject=Hello">contact</a>
+      </p>
+    </div>
 
     <audio id="player" preload="none">
       <source src="audio/cold_moon_16_44_1_FLAC_export_2026_01_12.flac" type="audio/flac">
@@ -256,11 +287,8 @@
 
     btn.addEventListener("click", async () => {
       try{
-        if (audio.paused || audio.ended) {
-          await audio.play();  // resume/start
-        } else {
-          audio.pause();       // pause (no reset)
-        }
+        if (audio.paused || audio.ended) await audio.play();
+        else audio.pause();
       } catch(e) {}
       setUI();
     });
