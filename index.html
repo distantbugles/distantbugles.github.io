@@ -51,6 +51,7 @@
     .small{font-size:13px;color:var(--muted);margin:10px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
+    /* PANEL AROUND RECORD (subtle plinth) */
     .panel{
       background:var(--panel);
       border-radius:18px;
@@ -60,6 +61,7 @@
         inset 0 0 0 1px rgba(0,0,0,.06);
     }
 
+    /* stage is layout only */
     .stage{
       width:100%;
       aspect-ratio: 11 / 10;
@@ -69,6 +71,7 @@
       overflow:visible;
     }
 
+    /* record */
     .disc{
       width:88%;
       aspect-ratio:1/1;
@@ -117,20 +120,28 @@
       pointer-events:none;
     }
 
-    /* red label */
+    /* LABEL: gray when paused, red when playing */
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
       aspect-ratio:1/1;
       border-radius:50%;
       background:
-        radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
-        radial-gradient(circle at center, var(--red) 0%, var(--red2) 70%, rgba(0,0,0,.30) 100%);
-      border: 1px solid rgba(255,255,255,.16);
+        radial-gradient(circle at 35% 30%, rgba(255,255,255,.12), rgba(255,255,255,0) 55%),
+        radial-gradient(circle at center, rgba(60,60,60,.95) 0%, rgba(35,35,35,.95) 70%, rgba(0,0,0,.35) 100%);
+      border: 1px solid rgba(255,255,255,.12);
       box-shadow:
         inset 0 0 0 6px rgba(0,0,0,.18),
         0 0 0 1px rgba(0,0,0,.08);
       display:flex; justify-content:center; align-items:center;
+      transition: background 220ms ease, border-color 220ms ease;
+    }
+
+    .stage.spinning .label{
+      background:
+        radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
+        radial-gradient(circle at center, var(--red) 0%, var(--red2) 70%, rgba(0,0,0,.30) 100%);
+      border-color: rgba(255,255,255,.16);
     }
 
     .hole{
@@ -148,6 +159,7 @@
       .stage.spinning .disc{ animation:none; }
     }
 
+    /* now playing (inside panel) */
     .np{
       margin-top:8px;
       display:flex;
@@ -167,10 +179,10 @@
       transform: translateY(0);
     }
 
-    /* now playing: red */
+    /* now playing: BLACK (italic) */
     .npLabel{
       font-size:13px;
-      color:var(--red);
+      color:rgba(0,0,0,.78);
       font-style: italic;
       letter-spacing:.04em;
       text-transform:lowercase;
@@ -181,25 +193,30 @@
       transform: translateX(.35ch);
     }
 
-    /* keep song title as-is */
+    /* song title: RED and slightly smaller + tighter spacing */
     .npTitle{
-      margin-top:2px;
-      font-size:16px;
-      color:rgba(0,0,0,.78);
-      letter-spacing:.12em;
+      margin-top:1px;
+      font-size:15px;
+      color:var(--red);
+      letter-spacing:.11em;
       text-transform:lowercase;
     }
 
-    /* artist: red */
-    .npArtist{
-      margin-top:1px;
+    /* artist line: red, with a subtle "by:" prefix */
+    .npArtistLine{
+      margin-top:2px;
       font-size:13px;
       color:var(--red);
       letter-spacing:.04em;
       text-transform:lowercase;
     }
 
-    /* keep timer as-is */
+    .npArtistLine .by{
+      opacity:.85;
+      margin-right:6px;
+    }
+
+    /* timer unchanged */
     .npTime{
       margin-top:1px;
       font-size:13px;
@@ -209,10 +226,10 @@
       text-transform:lowercase;
     }
 
-    /* power button — make it feel “finished” */
+    /* power button — “finished” */
     .powerBtn{
       appearance:none;
-      border:2px solid rgba(0,0,0,.28); /* thicker + darker */
+      border:2px solid rgba(0,0,0,.28);
       background: rgba(255,255,255,.94);
       border-radius:999px;
       width:56px;
@@ -224,18 +241,18 @@
         0 10px 26px rgba(0,0,0,.12),
         inset 0 0 0 1px rgba(255,255,255,.65);
       flex:0 0 auto;
+      transition: border-color 200ms ease, box-shadow 200ms ease;
     }
     .powerBtn:active{ transform: translateY(1px); }
 
     .powerIcon{
-      width:22px;             /* slightly bigger */
+      width:22px;
       height:22px;
       opacity:.90;
       color: rgba(0,0,0,.78);
       transition: color 200ms ease, filter 200ms ease;
     }
 
-    /* stronger red accent when playing */
     .stage.spinning ~ .np .powerIcon{
       color: var(--red);
       filter: drop-shadow(0 0 9px rgba(176,24,24,.25));
@@ -244,6 +261,7 @@
       border-color: rgba(176,24,24,.35);
     }
 
+    /* footer */
     .footer{
       margin-top:18px;
       text-align:left;
@@ -252,6 +270,7 @@
       text-align:center;
     }
 
+    /* Hide native audio UI */
     audio{ display:none; }
   </style>
 </head>
@@ -275,7 +294,9 @@
         <div class="npText" aria-hidden="true">
           <div class="npLabel"><span>now playing:</span></div>
           <div class="npTitle" id="trackTitle">loading…</div>
-          <div class="npArtist" id="trackArtist"></div>
+          <div class="npArtistLine" id="artistLine">
+            <span class="by">by:</span><span id="trackArtist"></span>
+          </div>
           <div class="npTime" id="trackTime">0:00 / 0:00</div>
         </div>
 
@@ -309,9 +330,10 @@
     const btn   = document.getElementById("toggle");
     const titleEl = document.getElementById("trackTitle");
     const artistEl = document.getElementById("trackArtist");
+    const artistLine = document.getElementById("artistLine");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !btn || !titleEl || !artistEl || !timeEl) return;
+    if (!audio || !stage || !btn || !titleEl || !artistEl || !artistLine || !timeEl) return;
 
     let queue = [];
     let idx = 0;
@@ -347,8 +369,16 @@
 
     const setTrack = (t, autoplay) => {
       audio.src = encodeURI(t.file);
-      titleEl.textContent = (t.title || "").toLowerCase();
-      artistEl.textContent = (t.artist || "").toLowerCase();
+
+      const title = (t.title || "").toLowerCase();
+      const artist = (t.artist || "").toLowerCase();
+
+      titleEl.textContent = title || "unknown";
+      artistEl.textContent = artist;
+
+      // hide artist line if missing
+      artistLine.style.display = artist ? "" : "none";
+
       audio.load();
       updateTime();
       if (autoplay) audio.play().catch(() => {});
@@ -394,12 +424,14 @@
 
         if (ready) setTrack(queue[idx], false);
         else titleEl.textContent = "no tracks";
+
         setUI();
       })
       .catch(() => {
         ready = false;
         titleEl.textContent = "playlist missing";
         artistEl.textContent = "";
+        artistLine.style.display = "none";
         timeEl.textContent = "0:00 / 0:00";
         setUI();
       });
