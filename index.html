@@ -15,7 +15,7 @@
 
       /* accent red */
       --red:#b01818;
-      --red2:#7f0f0f; /* deeper shadow tone */
+      --red2:#7f0f0f;
     }
 
     html,body{height:100%}
@@ -51,7 +51,7 @@
     .small{font-size:13px;color:var(--muted);margin:10px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
-    /* PANEL AROUND RECORD (subtle plinth) */
+    /* panel */
     .panel{
       background:var(--panel);
       border-radius:18px;
@@ -61,7 +61,7 @@
         inset 0 0 0 1px rgba(0,0,0,.06);
     }
 
-    /* stage is layout only */
+    /* stage */
     .stage{
       width:100%;
       aspect-ratio: 11 / 10;
@@ -120,7 +120,7 @@
       pointer-events:none;
     }
 
-    /* LABEL: gray when paused, red when playing */
+    /* label: gray paused, red playing */
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -159,7 +159,7 @@
       .stage.spinning .disc{ animation:none; }
     }
 
-    /* now playing (inside panel) */
+    /* now playing block */
     .np{
       margin-top:8px;
       display:flex;
@@ -179,7 +179,7 @@
       transform: translateY(0);
     }
 
-    /* now playing: BLACK (italic) */
+    /* now playing: BLACK */
     .npLabel{
       font-size:13px;
       color:rgba(0,0,0,.78);
@@ -187,13 +187,12 @@
       letter-spacing:.04em;
       text-transform:lowercase;
     }
-
     .npLabel span{
       display:inline-block;
       transform: translateX(.35ch);
     }
 
-    /* song title: RED and slightly smaller + tighter spacing */
+    /* song title: RED smaller */
     .npTitle{
       margin-top:1px;
       font-size:15px;
@@ -202,7 +201,7 @@
       text-transform:lowercase;
     }
 
-    /* artist line: red, with a subtle "by:" prefix */
+    /* artist: red with by: */
     .npArtistLine{
       margin-top:2px;
       font-size:13px;
@@ -210,7 +209,6 @@
       letter-spacing:.04em;
       text-transform:lowercase;
     }
-
     .npArtistLine .by{
       opacity:.85;
       margin-right:6px;
@@ -226,7 +224,48 @@
       text-transform:lowercase;
     }
 
-    /* power button — “finished” */
+    /* NEW: prev/next controls row (only visible when playing) */
+    .npNav{
+      margin-top:6px;
+      display:flex;
+      gap:10px;
+      opacity:0;
+      transform: translateY(4px);
+      transition: opacity 260ms ease, transform 260ms ease;
+      pointer-events:none;
+    }
+    .stage.spinning ~ .np .npNav{
+      opacity:1;
+      transform: translateY(0);
+      pointer-events:auto;
+    }
+
+    .navBtn{
+      appearance:none;
+      border:1px solid rgba(0,0,0,.18);
+      background: rgba(255,255,255,.70);
+      border-radius:999px;
+      width:36px;
+      height:28px;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      box-shadow: 0 6px 14px rgba(0,0,0,.08);
+    }
+    .navBtn:active{ transform: translateY(1px); }
+    .navIcon{
+      width:16px;
+      height:16px;
+      color: rgba(0,0,0,.65);
+    }
+    .stage.spinning ~ .np .navBtn{
+      border-color: rgba(176,24,24,.22);
+    }
+    .stage.spinning ~ .np .navBtn:hover .navIcon{
+      color: var(--red);
+    }
+
+    /* power button */
     .powerBtn{
       appearance:none;
       border:2px solid rgba(0,0,0,.28);
@@ -298,6 +337,19 @@
             <span class="by">by:</span><span id="trackArtist"></span>
           </div>
           <div class="npTime" id="trackTime">0:00 / 0:00</div>
+
+          <div class="npNav" aria-hidden="false">
+            <button class="navBtn" id="prevBtn" type="button" aria-label="previous">
+              <svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6"></path>
+              </svg>
+            </button>
+            <button class="navBtn" id="nextBtn" type="button" aria-label="next">
+              <svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 6l6 6-6 6"></path>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <button id="toggle" class="powerBtn" type="button" aria-label="play or pause">
@@ -328,15 +380,18 @@
     const audio = document.getElementById("player");
     const stage = document.getElementById("stage");
     const btn   = document.getElementById("toggle");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
     const titleEl = document.getElementById("trackTitle");
     const artistEl = document.getElementById("trackArtist");
     const artistLine = document.getElementById("artistLine");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !btn || !titleEl || !artistEl || !artistLine || !timeEl) return;
+    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !titleEl || !artistEl || !artistLine || !timeEl) return;
 
-    let queue = [];
-    let idx = 0;
+    let tracks = [];
+    let currentIdx = -1;
+    let history = [];
     let ready = false;
 
     const fmt = (s) => {
@@ -352,14 +407,6 @@
       timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
     };
 
-    const shuffle = (arr) => {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    };
-
     const setUI = () => {
       const playing = !audio.paused && !audio.ended;
       stage.classList.toggle("spinning", playing);
@@ -367,7 +414,20 @@
       updateTime();
     };
 
-    const setTrack = (t, autoplay) => {
+    const pickRandomIndex = (exceptIdx) => {
+      if (tracks.length <= 1) return 0;
+      let i;
+      do {
+        i = Math.floor(Math.random() * tracks.length);
+      } while (i === exceptIdx);
+      return i;
+    };
+
+    const setTrack = (idx, autoplay) => {
+      const t = tracks[idx];
+      if (!t) return;
+
+      currentIdx = idx;
       audio.src = encodeURI(t.file);
 
       const title = (t.title || "").toLowerCase();
@@ -375,8 +435,6 @@
 
       titleEl.textContent = title || "unknown";
       artistEl.textContent = artist;
-
-      // hide artist line if missing
       artistLine.style.display = artist ? "" : "none";
 
       audio.load();
@@ -384,18 +442,23 @@
       if (autoplay) audio.play().catch(() => {});
     };
 
-    const nextTrack = (autoplay) => {
-      if (!queue.length) return;
-      idx = (idx + 1) % queue.length;
-      setTrack(queue[idx], autoplay);
+    const playRandomNext = (autoplay) => {
+      if (!tracks.length) return;
+      if (currentIdx >= 0) history.push(currentIdx);
+      const nextIdx = pickRandomIndex(currentIdx);
+      setTrack(nextIdx, autoplay);
     };
 
+    // Power button: play/pause
     btn.addEventListener("click", async () => {
       if (!ready) return;
 
       try{
         if (audio.paused || audio.ended) {
-          if (!audio.src) setTrack(queue[idx], false);
+          if (!audio.src) {
+            // first play: pick a random start
+            setTrack(pickRandomIndex(-1), false);
+          }
           await audio.play();
         } else {
           audio.pause();
@@ -404,8 +467,39 @@
       setUI();
     });
 
+    // Next: always random next
+    nextBtn.addEventListener("click", () => {
+      if (!ready) return;
+      playRandomNext(true);
+      setUI();
+    });
+
+    // Prev:
+    // - if you’re >2s into the current track, restart it
+    // - otherwise go back in history (if any), else restart
+    prevBtn.addEventListener("click", () => {
+      if (!ready) return;
+
+      if (audio.currentTime > 2) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+        setUI();
+        return;
+      }
+
+      if (history.length > 0) {
+        const prevIdx = history.pop();
+        setTrack(prevIdx, true);
+      } else {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      }
+      setUI();
+    });
+
+    // Auto-advance forever
     audio.addEventListener("ended", () => {
-      nextTrack(true);
+      playRandomNext(true);
       setUI();
     });
 
@@ -417,12 +511,11 @@
     fetch("playlist.json", { cache: "no-store" })
       .then(r => r.json())
       .then(list => {
-        const tracks = Array.isArray(list) ? list : [];
-        queue = shuffle([...tracks]);
-        idx = 0;
-        ready = queue.length > 0;
+        tracks = Array.isArray(list) ? list : [];
+        ready = tracks.length > 0;
 
-        if (ready) setTrack(queue[idx], false);
+        // pre-load a random track for display (no autoplay)
+        if (ready) setTrack(pickRandomIndex(-1), false);
         else titleEl.textContent = "no tracks";
 
         setUI();
