@@ -167,16 +167,18 @@
       transform: translateY(0);
     }
 
+    /* UPDATED: italic, lighter “now playing:” */
     .npLabel{
-      font-size:13px;           /* match footer size */
-      color:var(--muted);
-      letter-spacing:.06em;
+      font-size:13px;
+      color:rgba(0,0,0,.45);
+      font-style: italic;
+      letter-spacing:.04em;
       text-transform:lowercase;
     }
 
     .npTitle{
       margin-top:2px;
-      font-size:16px;           /* slightly bigger, but not huge */
+      font-size:16px;
       color:rgba(0,0,0,.78);
       letter-spacing:.12em;
       text-transform:lowercase;
@@ -221,6 +223,11 @@
       text-align:center;
     }
 
+    /* UPDATED: center the link row */
+    .links{
+      text-align:center;
+    }
+
     /* Hide native audio UI */
     audio{ display:none; }
   </style>
@@ -260,7 +267,7 @@
       <p class="small footerCenter">things will change.</p>
       <p class="small">if you hear something you want: email me a lyric, a timestamp, or a description.</p>
 
-      <p class="small">
+      <p class="small links">
         <a href="https://fauna-flora.bandcamp.com/album/fauna-flora" target="_blank" rel="noopener noreferrer">bandcamp</a>
         <span style="margin:0 10px;">·</span>
         <a href="mailto:faunafloramusic@gmail.com?subject=Hello">contact</a>
