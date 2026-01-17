@@ -183,6 +183,16 @@
       text-transform:lowercase;
     }
 
+    /* NEW: timer under title (small + italic + tighter spacing) */
+    .npTime{
+      margin-top:1px; /* tighter than the title spacing */
+      font-size:13px;
+      color:rgba(0,0,0,.45);
+      font-style: italic;
+      letter-spacing:.04em;
+      text-transform:lowercase;
+    }
+
     /* power button */
     .powerBtn{
       appearance:none;
@@ -246,6 +256,7 @@
         <div class="npText" aria-hidden="true">
           <div class="npLabel">now playing:</div>
           <div class="npTitle" id="trackTitle">cold moon</div>
+          <div class="npTime" id="trackTime">0:00 / 0:00</div>
         </div>
 
         <button id="toggle" class="powerBtn" type="button" aria-label="play or pause">
@@ -278,12 +289,28 @@
     const audio = document.getElementById("player");
     const stage = document.getElementById("stage");
     const btn   = document.getElementById("toggle");
-    if (!audio || !stage || !btn) return;
+    const timeEl = document.getElementById("trackTime");
+
+    if (!audio || !stage || !btn || !timeEl) return;
+
+    const fmt = (s) => {
+      s = Math.max(0, Math.floor(s || 0));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return m + ":" + String(r).padStart(2, "0");
+    };
+
+    const updateTime = () => {
+      const cur = audio.currentTime || 0;
+      const dur = (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
+      timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
+    };
 
     const setUI = () => {
       const playing = !audio.paused && !audio.ended;
       stage.classList.toggle("spinning", playing);
       btn.setAttribute("aria-label", playing ? "pause" : "play");
+      updateTime();
     };
 
     btn.addEventListener("click", async () => {
@@ -296,7 +323,14 @@
 
     audio.addEventListener("playing", setUI);
     audio.addEventListener("pause", setUI);
-    audio.addEventListener("ended", setUI);
+    audio.addEventListener("ended", () => {
+      setUI();
+      audio.currentTime = 0;
+      updateTime();
+    });
+
+    audio.addEventListener("timeupdate", updateTime);
+    audio.addEventListener("loadedmetadata", updateTime);
 
     setUI();
   })();
