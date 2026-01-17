@@ -13,7 +13,6 @@
       --rule:rgba(0,0,0,.10);
       --panel:#f6f6f4;
 
-      /* accent red */
       --red:#b01818;
       --red2:#7f0f0f;
     }
@@ -51,17 +50,15 @@
     .small{font-size:13px;color:var(--muted);margin:10px 0}
     a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 
-    /* panel */
     .panel{
       background:var(--panel);
       border-radius:18px;
-      padding:22px 18px 12px;
+      padding:22px 18px 18px; /* bumped back up (more “square”) */
       box-shadow:
         0 16px 40px rgba(0,0,0,.06),
         inset 0 0 0 1px rgba(0,0,0,.06);
     }
 
-    /* stage */
     .stage{
       width:100%;
       aspect-ratio: 11 / 10;
@@ -71,7 +68,6 @@
       overflow:visible;
     }
 
-    /* record */
     .disc{
       width:88%;
       aspect-ratio:1/1;
@@ -120,7 +116,6 @@
       pointer-events:none;
     }
 
-    /* label: gray paused, red playing */
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -159,7 +154,6 @@
       .stage.spinning .disc{ animation:none; }
     }
 
-    /* now playing block */
     .np{
       margin-top:8px;
       display:flex;
@@ -179,7 +173,6 @@
       transform: translateY(0);
     }
 
-    /* now playing: BLACK */
     .npLabel{
       font-size:13px;
       color:rgba(0,0,0,.78);
@@ -192,7 +185,6 @@
       transform: translateX(.35ch);
     }
 
-    /* song title: RED smaller */
     .npTitle{
       margin-top:1px;
       font-size:15px;
@@ -201,7 +193,6 @@
       text-transform:lowercase;
     }
 
-    /* artist: red with by: */
     .npArtistLine{
       margin-top:2px;
       font-size:13px;
@@ -214,7 +205,6 @@
       margin-right:6px;
     }
 
-    /* timer unchanged */
     .npTime{
       margin-top:1px;
       font-size:13px;
@@ -224,9 +214,9 @@
       text-transform:lowercase;
     }
 
-    /* NEW: prev/next controls row (only visible when playing) */
+    /* nav controls row (only visible when playing) */
     .npNav{
-      margin-top:6px;
+      margin-top:8px;
       display:flex;
       gap:10px;
       opacity:0;
@@ -240,29 +230,37 @@
       pointer-events:auto;
     }
 
+    /* bigger, thumb-friendly, more “vintage” pill buttons */
     .navBtn{
       appearance:none;
       border:1px solid rgba(0,0,0,.18);
-      background: rgba(255,255,255,.70);
+      background: rgba(255,255,255,.78);
       border-radius:999px;
-      width:36px;
-      height:28px;
+      width:44px;
+      height:34px;
       display:grid;
       place-items:center;
       cursor:pointer;
-      box-shadow: 0 6px 14px rgba(0,0,0,.08);
+      box-shadow:
+        0 8px 18px rgba(0,0,0,.10),
+        inset 0 0 0 1px rgba(255,255,255,.65);
     }
     .navBtn:active{ transform: translateY(1px); }
-    .navIcon{
-      width:16px;
-      height:16px;
-      color: rgba(0,0,0,.65);
+
+    /* Red filled triangles, always visible */
+    .navTri{
+      width:0;
+      height:0;
+      border-top:7px solid transparent;
+      border-bottom:7px solid transparent;
     }
-    .stage.spinning ~ .np .navBtn{
-      border-color: rgba(176,24,24,.22);
+    .navTri.left{
+      border-right:11px solid var(--red);
+      margin-left:-2px;
     }
-    .stage.spinning ~ .np .navBtn:hover .navIcon{
-      color: var(--red);
+    .navTri.right{
+      border-left:11px solid var(--red);
+      margin-right:-2px;
     }
 
     /* power button */
@@ -300,7 +298,6 @@
       border-color: rgba(176,24,24,.35);
     }
 
-    /* footer */
     .footer{
       margin-top:18px;
       text-align:left;
@@ -309,7 +306,6 @@
       text-align:center;
     }
 
-    /* Hide native audio UI */
     audio{ display:none; }
   </style>
 </head>
@@ -338,16 +334,12 @@
           </div>
           <div class="npTime" id="trackTime">0:00 / 0:00</div>
 
-          <div class="npNav" aria-hidden="false">
+          <div class="npNav">
             <button class="navBtn" id="prevBtn" type="button" aria-label="previous">
-              <svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M15 18l-6-6 6-6"></path>
-              </svg>
+              <span class="navTri left" aria-hidden="true"></span>
             </button>
             <button class="navBtn" id="nextBtn" type="button" aria-label="next">
-              <svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9 6l6 6-6 6"></path>
-              </svg>
+              <span class="navTri right" aria-hidden="true"></span>
             </button>
           </div>
         </div>
@@ -449,14 +441,12 @@
       setTrack(nextIdx, autoplay);
     };
 
-    // Power button: play/pause
     btn.addEventListener("click", async () => {
       if (!ready) return;
 
       try{
         if (audio.paused || audio.ended) {
           if (!audio.src) {
-            // first play: pick a random start
             setTrack(pickRandomIndex(-1), false);
           }
           await audio.play();
@@ -467,16 +457,12 @@
       setUI();
     });
 
-    // Next: always random next
     nextBtn.addEventListener("click", () => {
       if (!ready) return;
       playRandomNext(true);
       setUI();
     });
 
-    // Prev:
-    // - if you’re >2s into the current track, restart it
-    // - otherwise go back in history (if any), else restart
     prevBtn.addEventListener("click", () => {
       if (!ready) return;
 
@@ -497,7 +483,6 @@
       setUI();
     });
 
-    // Auto-advance forever
     audio.addEventListener("ended", () => {
       playRandomNext(true);
       setUI();
@@ -514,7 +499,6 @@
         tracks = Array.isArray(list) ? list : [];
         ready = tracks.length > 0;
 
-        // pre-load a random track for display (no autoplay)
         if (ready) setTrack(pickRandomIndex(-1), false);
         else titleEl.textContent = "no tracks";
 
