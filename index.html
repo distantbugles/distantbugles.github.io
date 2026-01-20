@@ -13,6 +13,7 @@
       --rule:rgba(0,0,0,.10);
       --panel:#f6f6f4;
 
+      /* accent red */
       --red:#b01818;
       --red2:#7f0f0f;
     }
@@ -53,7 +54,7 @@
     .panel{
       background:var(--panel);
       border-radius:18px;
-      padding:22px 18px 18px; /* bumped back up (more “square”) */
+      padding:22px 18px 18px;
       box-shadow:
         0 16px 40px rgba(0,0,0,.06),
         inset 0 0 0 1px rgba(0,0,0,.06);
@@ -116,6 +117,7 @@
       pointer-events:none;
     }
 
+    /* label: gray paused, red playing */
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -173,6 +175,7 @@
       transform: translateY(0);
     }
 
+    /* now playing: BLACK */
     .npLabel{
       font-size:13px;
       color:rgba(0,0,0,.78);
@@ -185,6 +188,7 @@
       transform: translateX(.35ch);
     }
 
+    /* song title: RED smaller */
     .npTitle{
       margin-top:1px;
       font-size:15px;
@@ -193,6 +197,7 @@
       text-transform:lowercase;
     }
 
+    /* artist: red with by: */
     .npArtistLine{
       margin-top:2px;
       font-size:13px;
@@ -205,6 +210,7 @@
       margin-right:6px;
     }
 
+    /* timer unchanged */
     .npTime{
       margin-top:1px;
       font-size:13px;
@@ -230,7 +236,6 @@
       pointer-events:auto;
     }
 
-    /* bigger, thumb-friendly, more “vintage” pill buttons */
     .navBtn{
       appearance:none;
       border:1px solid rgba(0,0,0,.18);
@@ -247,7 +252,6 @@
     }
     .navBtn:active{ transform: translateY(1px); }
 
-    /* Red filled triangles, always visible */
     .navTri{
       width:0;
       height:0;
@@ -358,6 +362,8 @@
       <p class="small">if you hear something you want: email me a lyric, a timestamp, or a description.</p>
 
       <p class="small">
+        <a href="https://venmo.com/u/STEPHEN-WARD-0" target="_blank" rel="noopener noreferrer">support</a>
+        <span style="margin:0 10px;">·</span>
         <a href="https://fauna-flora.bandcamp.com/album/fauna-flora" target="_blank" rel="noopener noreferrer">bandcamp</a>
         <span style="margin:0 10px;">·</span>
         <a href="mailto:faunafloramusic@gmail.com?subject=Hello">contact</a>
@@ -446,9 +452,7 @@
 
       try{
         if (audio.paused || audio.ended) {
-          if (!audio.src) {
-            setTrack(pickRandomIndex(-1), false);
-          }
+          if (!audio.src) setTrack(pickRandomIndex(-1), false);
           await audio.play();
         } else {
           audio.pause();
