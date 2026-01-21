@@ -40,9 +40,17 @@
       color:var(--red);
     }
 
+    /* UPDATED header copy: keep "music by..." + add the archive definition line */
     .byline{
       text-align:center;
-      margin:0 0 18px;
+      margin:0;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .tagline{
+      text-align:center;
+      margin:6px 0 18px;
       font-size:13px;
       color:var(--muted);
     }
@@ -116,6 +124,7 @@
       pointer-events:none;
     }
 
+    /* label: gray paused, red playing */
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -173,6 +182,7 @@
       transform: translateY(0);
     }
 
+    /* now playing: BLACK */
     .npLabel{
       font-size:13px;
       color:rgba(0,0,0,.78);
@@ -185,6 +195,7 @@
       transform: translateX(.35ch);
     }
 
+    /* song title: RED smaller */
     .npTitle{
       margin-top:1px;
       font-size:15px;
@@ -193,6 +204,7 @@
       text-transform:lowercase;
     }
 
+    /* artist: red with by: */
     .npArtistLine{
       margin-top:2px;
       font-size:13px;
@@ -205,6 +217,7 @@
       margin-right:6px;
     }
 
+    /* timer unchanged */
     .npTime{
       margin-top:1px;
       font-size:13px;
@@ -214,6 +227,7 @@
       text-transform:lowercase;
     }
 
+    /* nav controls row (only visible when playing) */
     .npNav{
       margin-top:8px;
       display:flex;
@@ -310,6 +324,7 @@
   <main>
     <div class="brand">distant bugles</div>
     <p class="byline">music by Steve Ward and friends</p>
+    <p class="tagline">past releases, works-in-progress, and new recordings as they’re finished (including Cherry Twister and Fauna Flora)</p>
 
     <div class="panel">
       <div id="stage" class="stage" aria-label="player">
