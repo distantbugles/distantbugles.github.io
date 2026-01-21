@@ -40,7 +40,6 @@
       color:var(--red);
     }
 
-    /* UPDATED header copy: keep "music by..." + add the archive definition line */
     .byline{
       text-align:center;
       margin:0;
@@ -48,11 +47,22 @@
       color:var(--muted);
     }
 
+    /* UPDATED: make the new line feel like a subheader (italic + red + separators) */
     .tagline{
       text-align:center;
-      margin:6px 0 18px;
+      margin:6px 0 18px;       /* keep spacing as-is */
       font-size:13px;
-      color:var(--muted);
+      color:var(--red);
+      font-style: italic;
+      letter-spacing:.04em;
+      text-transform:lowercase;
+    }
+    .tagline::before,
+    .tagline::after{
+      content:"—";
+      display:inline-block;
+      margin:0 10px;
+      opacity:.55;
     }
 
     .small{font-size:13px;color:var(--muted);margin:10px 0}
@@ -124,7 +134,6 @@
       pointer-events:none;
     }
 
-    /* label: gray paused, red playing */
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -182,7 +191,6 @@
       transform: translateY(0);
     }
 
-    /* now playing: BLACK */
     .npLabel{
       font-size:13px;
       color:rgba(0,0,0,.78);
@@ -195,7 +203,6 @@
       transform: translateX(.35ch);
     }
 
-    /* song title: RED smaller */
     .npTitle{
       margin-top:1px;
       font-size:15px;
@@ -204,7 +211,6 @@
       text-transform:lowercase;
     }
 
-    /* artist: red with by: */
     .npArtistLine{
       margin-top:2px;
       font-size:13px;
@@ -217,7 +223,6 @@
       margin-right:6px;
     }
 
-    /* timer unchanged */
     .npTime{
       margin-top:1px;
       font-size:13px;
@@ -227,7 +232,6 @@
       text-transform:lowercase;
     }
 
-    /* nav controls row (only visible when playing) */
     .npNav{
       margin-top:8px;
       display:flex;
