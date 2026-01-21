@@ -139,6 +139,9 @@
       border-color: rgba(255,255,255,.16);
     }
 
+    /* subtle visual cue when haze is on (tiny, not shouty) */
+    .stage.hazeOn .discSheen{ opacity:.40; }
+
     .hole{
       width:28%;
       aspect-ratio:1/1;
@@ -260,15 +263,13 @@
       margin-right:-2px;
     }
 
-    /* drift button (~) */
-    .driftBtn{
+    /* haze button */
+    .hazeGlyph{
       font-size:16px;
       line-height:1;
-      color:rgba(0,0,0,.65);
+      color:rgba(0,0,0,.55);
     }
-    .driftOn .driftBtn{
-      color:var(--red);
-    }
+    .stage.hazeOn ~ .np .hazeGlyph{ color:var(--red); }
 
     .powerBtn{
       appearance:none;
@@ -350,8 +351,8 @@
               <span class="navTri left" aria-hidden="true"></span>
             </button>
 
-            <button class="navBtn" id="driftBtn" type="button" aria-label="drift mode">
-              <span class="driftBtn" aria-hidden="true">~</span>
+            <button class="navBtn" id="hazeBtn" type="button" aria-label="haze">
+              <span class="hazeGlyph" aria-hidden="true">~</span>
             </button>
 
             <button class="navBtn" id="nextBtn" type="button" aria-label="next">
@@ -393,21 +394,21 @@
     const btn   = document.getElementById("toggle");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
-    const driftBtn = document.getElementById("driftBtn");
+    const hazeBtn = document.getElementById("hazeBtn");
     const titleEl = document.getElementById("trackTitle");
     const artistEl = document.getElementById("trackArtist");
     const artistLine = document.getElementById("artistLine");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !driftBtn || !titleEl || !artistEl || !artistLine || !timeEl) return;
+    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !hazeBtn || !titleEl || !artistEl || !artistLine || !timeEl) return;
 
     let tracks = [];
     let currentIdx = -1;
     let history = [];
     let ready = false;
 
-    // ---- DRIFT FX (tape slow + haze) ----
-    let driftOn = false;
+    // ---- HAZE FX (no speed change, no zipper) ----
+    let hazeOn = false;
     let audioCtx = null;
     let srcNode = null;
     let dryGain = null;
@@ -415,13 +416,11 @@
     let lowpass = null;
     let highpass = null;
     let convolver = null;
-    let delay = null;
-    let lfo = null;
-    let lfoGain = null;
+    let preDelay = null;
     let noiseSrc = null;
     let noiseGain = null;
 
-    const makeImpulse = (ctx, seconds=2.6, decay=3.0) => {
+    const makeImpulse = (ctx, seconds=2.4, decay=3.6) => {
       const rate = ctx.sampleRate;
       const len = Math.floor(rate * seconds);
       const buf = ctx.createBuffer(2, len, rate);
@@ -429,6 +428,7 @@
         const data = buf.getChannelData(c);
         for (let i=0; i<len; i++){
           const t = i / len;
+          // smoother tail
           data[i] = (Math.random()*2-1) * Math.pow(1 - t, decay);
         }
       }
@@ -440,7 +440,7 @@
       const len = rate * 2;
       const buf = ctx.createBuffer(1, len, rate);
       const data = buf.getChannelData(0);
-      for (let i=0; i<len; i++) data[i] = (Math.random()*2-1) * 0.25;
+      for (let i=0; i<len; i++) data[i] = (Math.random()*2-1) * 0.18;
       const src = ctx.createBufferSource();
       src.buffer = buf;
       src.loop = true;
@@ -451,8 +451,6 @@
       if (audioCtx) return;
 
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      // source from the <audio> element
       srcNode = audioCtx.createMediaElementSource(audio);
 
       dryGain = audioCtx.createGain();
@@ -462,82 +460,68 @@
 
       highpass = audioCtx.createBiquadFilter();
       highpass.type = "highpass";
-      highpass.frequency.value = 80;
+      highpass.frequency.value = 90;
 
       lowpass = audioCtx.createBiquadFilter();
       lowpass.type = "lowpass";
       lowpass.frequency.value = 2400;
 
-      delay = audioCtx.createDelay(0.2);
-      delay.delayTime.value = 0.035;
+      preDelay = audioCtx.createDelay(0.1);
+      preDelay.delayTime.value = 0.020;
 
       convolver = audioCtx.createConvolver();
-      convolver.buffer = makeImpulse(audioCtx, 2.8, 3.2);
+      convolver.buffer = makeImpulse(audioCtx, 2.6, 3.8);
 
-      // wow/flutter via delayTime modulation
-      lfo = audioCtx.createOscillator();
-      lfo.type = "sine";
-      lfo.frequency.value = 0.25;
-
-      lfoGain = audioCtx.createGain();
-      lfoGain.gain.value = 0.004; // subtle
-
-      lfo.connect(lfoGain);
-      lfoGain.connect(delay.delayTime);
-      lfo.start();
-
-      // noise bed (very faint)
+      // faint noise bed (optional; very low)
       noiseSrc = makeNoise(audioCtx);
       noiseGain = audioCtx.createGain();
       noiseGain.gain.value = 0.0;
 
       const noiseHP = audioCtx.createBiquadFilter();
       noiseHP.type = "highpass";
-      noiseHP.frequency.value = 600;
-
+      noiseHP.frequency.value = 900;
       noiseSrc.connect(noiseHP);
       noiseHP.connect(noiseGain);
 
-      // routing:
-      // src -> dry -> destination
+      // routing
       srcNode.connect(dryGain);
       dryGain.connect(audioCtx.destination);
 
-      // src -> filters -> delay -> convolver -> wet -> destination
       srcNode.connect(highpass);
       highpass.connect(lowpass);
-      lowpass.connect(delay);
-      delay.connect(convolver);
+      lowpass.connect(preDelay);
+      preDelay.connect(convolver);
       convolver.connect(wetGain);
       wetGain.connect(audioCtx.destination);
 
-      // noise -> convolver -> wet
       noiseGain.connect(convolver);
+
       noiseSrc.start();
 
-      // if Safari starts suspended, resume on user gesture
       if (audioCtx.state === "suspended") await audioCtx.resume();
     };
 
-    const setDrift = async (on) => {
-      driftOn = on;
-      stage.classList.toggle("driftOn", driftOn);
+    const setHaze = async (on) => {
+      hazeOn = on;
+      stage.classList.toggle("hazeOn", hazeOn);
 
-      if (!driftOn) {
-        // back to normal
-        audio.playbackRate = 1.0;
+      if (!hazeOn) {
         if (wetGain) wetGain.gain.value = 0.0;
         if (noiseGain) noiseGain.gain.value = 0.0;
-        if (lfoGain) lfoGain.gain.value = 0.004;
+        if (lowpass) lowpass.frequency.value = 2400;
+        if (highpass) highpass.frequency.value = 90;
+        if (preDelay) preDelay.delayTime.value = 0.020;
         return;
       }
 
       await ensureFX();
-      // tape slow + haze
-      audio.playbackRate = 0.74;     // slows + drops pitch
-      wetGain.gain.value = 0.55;     // amount of reverb/haze
-      noiseGain.gain.value = 0.010;  // faint
-      lfoGain.gain.value = 0.006;    // a touch more wobble
+
+      // “veil” settings
+      wetGain.gain.value = 0.42;
+      noiseGain.gain.value = 0.004;      // very faint; set to 0 if you want none
+      lowpass.frequency.value = 1700;
+      highpass.frequency.value = 120;
+      preDelay.delayTime.value = 0.030;
     };
 
     // ---- Player + jukebox ----
@@ -559,10 +543,8 @@
       stage.classList.toggle("spinning", playing);
       btn.setAttribute("aria-label", playing ? "pause" : "play");
       updateTime();
-
-      // if paused, drift should be visually off (but keep state)
-      if (!playing) stage.classList.remove("driftOn");
-      else if (driftOn) stage.classList.add("driftOn");
+      if (!playing) stage.classList.remove("hazeOn");
+      else if (hazeOn) stage.classList.add("hazeOn");
     };
 
     const pickRandomIndex = (exceptIdx) => {
@@ -590,8 +572,8 @@
       audio.load();
       updateTime();
 
-      // reset drift on track change (keeps it from stacking weirdness)
-      setDrift(false);
+      // keep haze state across tracks (no forced reset)
+      if (hazeOn) setHaze(true);
 
       if (autoplay) audio.play().catch(() => {});
     };
@@ -643,11 +625,9 @@
       setUI();
     });
 
-    // Drift toggle (only matters while playing)
-    driftBtn.addEventListener("click", async () => {
+    hazeBtn.addEventListener("click", async () => {
       if (!ready) return;
-      await setDrift(!driftOn);
-      if (!audio.paused) audio.play().catch(() => {});
+      await setHaze(!hazeOn);
       setUI();
     });
 
@@ -656,7 +636,12 @@
       setUI();
     });
 
-    audio.addEventListener("playing", setUI);
+    audio.addEventListener("playing", async () => {
+      // ensure audio context exists only when user starts playback
+      if (hazeOn) await ensureFX();
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+      setUI();
+    });
     audio.addEventListener("pause", setUI);
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
