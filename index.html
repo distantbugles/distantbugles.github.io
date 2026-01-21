@@ -31,7 +31,6 @@
       padding:0 22px;
     }
 
-    /* HEADER: back to the clean two-line version */
     .brand{
       opacity:.85;
       letter-spacing:.18em;
@@ -117,7 +116,6 @@
       pointer-events:none;
     }
 
-    /* label: gray paused, red playing */
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -175,7 +173,6 @@
       transform: translateY(0);
     }
 
-    /* now playing: BLACK */
     .npLabel{
       font-size:13px;
       color:rgba(0,0,0,.78);
@@ -188,7 +185,6 @@
       transform: translateX(.35ch);
     }
 
-    /* song title: RED smaller */
     .npTitle{
       margin-top:1px;
       font-size:15px;
@@ -197,7 +193,6 @@
       text-transform:lowercase;
     }
 
-    /* artist: red with by: */
     .npArtistLine{
       margin-top:2px;
       font-size:13px;
@@ -210,7 +205,6 @@
       margin-right:6px;
     }
 
-    /* timer unchanged */
     .npTime{
       margin-top:1px;
       font-size:13px;
@@ -220,7 +214,6 @@
       text-transform:lowercase;
     }
 
-    /* nav controls row (only visible when playing) */
     .npNav{
       margin-top:8px;
       display:flex;
@@ -309,10 +302,10 @@
       text-align:center;
     }
 
-    /* NEW: the archive line lives at the bottom, centered */
+    /* UPDATED: left-justified and period at end */
     .archiveNote{
-      text-align:center;
-      margin:18px 0 6px;
+      text-align:left;          /* <- changed from center */
+      margin:18px 0 12px;       /* a hair more space before the next sentence */
       font-size:13px;
       color:var(--muted);
       text-transform:lowercase;
@@ -366,7 +359,7 @@
     </div>
 
     <div class="footer">
-      <p class="archiveNote">past releases, works-in-progress, and new recordings as they’re finished (including cherry twister and fauna flora)</p>
+      <p class="archiveNote">past releases, works-in-progress, and new recordings as they’re finished (including cherry twister and fauna flora).</p>
 
       <p class="small">if you hear something you want: email me a lyric, a timestamp, or a description.</p>
 
