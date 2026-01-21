@@ -114,8 +114,13 @@
       );
       mix-blend-mode: screen;
       pointer-events:none;
+      transition: opacity 220ms ease;
     }
 
+    /* subtle stage cue when fx is on */
+    .stage.fxOn .discSheen{ opacity:.45; }
+
+    /* label: gray paused, red playing */
     .label{
       position:absolute; inset:0; margin:auto;
       width:22%;
@@ -138,9 +143,6 @@
         radial-gradient(circle at center, var(--red) 0%, var(--red2) 70%, rgba(0,0,0,.30) 100%);
       border-color: rgba(255,255,255,.16);
     }
-
-    /* subtle visual cue when haze is on (tiny, not shouty) */
-    .stage.hazeOn .discSheen{ opacity:.40; }
 
     .hole{
       width:28%;
@@ -176,6 +178,7 @@
       transform: translateY(0);
     }
 
+    /* now playing block */
     .npLabel{
       font-size:13px;
       color:rgba(0,0,0,.78);
@@ -245,6 +248,7 @@
       box-shadow:
         0 8px 18px rgba(0,0,0,.10),
         inset 0 0 0 1px rgba(255,255,255,.65);
+      transition: box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
     }
     .navBtn:active{ transform: translateY(1px); }
 
@@ -263,13 +267,31 @@
       margin-right:-2px;
     }
 
-    /* haze button */
-    .hazeGlyph{
+    /* FX button (~) */
+    .fxGlyph{
       font-size:16px;
       line-height:1;
       color:rgba(0,0,0,.55);
+      transition: color 160ms ease;
     }
-    .stage.hazeOn ~ .np .hazeGlyph{ color:var(--red); }
+
+    /* Strong “ON” indication */
+    .stage.fxOn ~ .np #fxBtn{
+      border-color: rgba(176,24,24,.45);
+      background: rgba(176,24,24,.08);
+      box-shadow:
+        0 10px 22px rgba(176,24,24,.14),
+        inset 0 0 0 1px rgba(255,255,255,.65);
+    }
+    .stage.fxOn ~ .np #fxBtn .fxGlyph{
+      color: var(--red);
+    }
+
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 10px 22px rgba(176,24,24,.14), inset 0 0 0 1px rgba(255,255,255,.65); }
+      50%     { box-shadow: 0 14px 28px rgba(176,24,24,.22), inset 0 0 0 1px rgba(255,255,255,.65); }
+    }
+    .stage.fxOn ~ .np #fxBtn{ animation: pulse 1.8s ease-in-out infinite; }
 
     .powerBtn{
       appearance:none;
@@ -351,8 +373,8 @@
               <span class="navTri left" aria-hidden="true"></span>
             </button>
 
-            <button class="navBtn" id="hazeBtn" type="button" aria-label="haze">
-              <span class="hazeGlyph" aria-hidden="true">~</span>
+            <button class="navBtn" id="fxBtn" type="button" aria-label="haze">
+              <span class="fxGlyph" aria-hidden="true">~</span>
             </button>
 
             <button class="navBtn" id="nextBtn" type="button" aria-label="next">
@@ -394,33 +416,41 @@
     const btn   = document.getElementById("toggle");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
-    const hazeBtn = document.getElementById("hazeBtn");
+    const fxBtn = document.getElementById("fxBtn");
     const titleEl = document.getElementById("trackTitle");
     const artistEl = document.getElementById("trackArtist");
     const artistLine = document.getElementById("artistLine");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !hazeBtn || !titleEl || !artistEl || !artistLine || !timeEl) return;
+    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !fxBtn || !titleEl || !artistEl || !artistLine || !timeEl) return;
 
     let tracks = [];
     let currentIdx = -1;
     let history = [];
     let ready = false;
 
-    // ---- HAZE FX (no speed change, no zipper) ----
-    let hazeOn = false;
-    let audioCtx = null;
-    let srcNode = null;
-    let dryGain = null;
-    let wetGain = null;
-    let lowpass = null;
-    let highpass = null;
-    let convolver = null;
-    let preDelay = null;
-    let noiseSrc = null;
-    let noiseGain = null;
+    // ---- FX: "space" (reverb + pingpong delay + dark filter) ----
+    let fxOn = false;
+    let ctx = null;
 
-    const makeImpulse = (ctx, seconds=2.4, decay=3.6) => {
+    let src = null;
+    let dry = null;
+    let wet = null;
+
+    let hp = null;
+    let lp = null;
+
+    let pingL = null;
+    let pingR = null;
+    let fbL = null;
+    let fbR = null;
+    let split = null;
+    let merge = null;
+
+    let conv = null;
+    let predelay = null;
+
+    const makeImpulse = (ctx, seconds=2.8, decay=3.8) => {
       const rate = ctx.sampleRate;
       const len = Math.floor(rate * seconds);
       const buf = ctx.createBuffer(2, len, rate);
@@ -428,103 +458,110 @@
         const data = buf.getChannelData(c);
         for (let i=0; i<len; i++){
           const t = i / len;
-          // smoother tail
           data[i] = (Math.random()*2-1) * Math.pow(1 - t, decay);
         }
       }
       return buf;
     };
 
-    const makeNoise = (ctx) => {
-      const rate = ctx.sampleRate;
-      const len = rate * 2;
-      const buf = ctx.createBuffer(1, len, rate);
-      const data = buf.getChannelData(0);
-      for (let i=0; i<len; i++) data[i] = (Math.random()*2-1) * 0.18;
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.loop = true;
-      return src;
-    };
-
     const ensureFX = async () => {
-      if (audioCtx) return;
+      if (ctx) return;
 
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      srcNode = audioCtx.createMediaElementSource(audio);
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      src = ctx.createMediaElementSource(audio);
 
-      dryGain = audioCtx.createGain();
-      wetGain = audioCtx.createGain();
-      dryGain.gain.value = 1.0;
-      wetGain.gain.value = 0.0;
+      dry = ctx.createGain();
+      wet = ctx.createGain();
+      dry.gain.value = 1.0;
+      wet.gain.value = 0.0;
 
-      highpass = audioCtx.createBiquadFilter();
-      highpass.type = "highpass";
-      highpass.frequency.value = 90;
+      hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 120;
 
-      lowpass = audioCtx.createBiquadFilter();
-      lowpass.type = "lowpass";
-      lowpass.frequency.value = 2400;
+      lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 2600;
 
-      preDelay = audioCtx.createDelay(0.1);
-      preDelay.delayTime.value = 0.020;
+      // pingpong delay (fixed times, no modulation = no zipper)
+      split = ctx.createChannelSplitter(2);
+      merge = ctx.createChannelMerger(2);
 
-      convolver = audioCtx.createConvolver();
-      convolver.buffer = makeImpulse(audioCtx, 2.6, 3.8);
+      pingL = ctx.createDelay(0.6);
+      pingR = ctx.createDelay(0.6);
+      pingL.delayTime.value = 0.34;   // ~ quarter-ish
+      pingR.delayTime.value = 0.48;   // offset for “pingpong”
 
-      // faint noise bed (optional; very low)
-      noiseSrc = makeNoise(audioCtx);
-      noiseGain = audioCtx.createGain();
-      noiseGain.gain.value = 0.0;
+      fbL = ctx.createGain();
+      fbR = ctx.createGain();
+      fbL.gain.value = 0.28;
+      fbR.gain.value = 0.28;
 
-      const noiseHP = audioCtx.createBiquadFilter();
-      noiseHP.type = "highpass";
-      noiseHP.frequency.value = 900;
-      noiseSrc.connect(noiseHP);
-      noiseHP.connect(noiseGain);
+      // feedback loops
+      pingL.connect(fbL); fbL.connect(pingR);
+      pingR.connect(fbR); fbR.connect(pingL);
 
-      // routing
-      srcNode.connect(dryGain);
-      dryGain.connect(audioCtx.destination);
+      // route L->pingL, R->pingR
+      // (we mix to stereo merge later)
+      // note: we'll feed both channels into both delays for a wider feel
+      // by summing input pre-split.
+      // We do: filtered mono-ish -> split -> delays.
+      predelay = ctx.createDelay(0.12);
+      predelay.delayTime.value = 0.030;
 
-      srcNode.connect(highpass);
-      highpass.connect(lowpass);
-      lowpass.connect(preDelay);
-      preDelay.connect(convolver);
-      convolver.connect(wetGain);
-      wetGain.connect(audioCtx.destination);
+      conv = ctx.createConvolver();
+      conv.buffer = makeImpulse(ctx, 2.8, 3.9);
 
-      noiseGain.connect(convolver);
+      // Dry path
+      src.connect(dry);
+      dry.connect(ctx.destination);
 
-      noiseSrc.start();
+      // Wet path
+      src.connect(hp);
+      hp.connect(lp);
+      lp.connect(predelay);
 
-      if (audioCtx.state === "suspended") await audioCtx.resume();
+      // pingpong
+      predelay.connect(split);
+      split.connect(pingL, 0);
+      split.connect(pingR, 1);
+
+      pingL.connect(merge, 0, 0);
+      pingR.connect(merge, 0, 1);
+
+      // feed pingpong into reverb
+      merge.connect(conv);
+      conv.connect(wet);
+      wet.connect(ctx.destination);
+
+      if (ctx.state === "suspended") await ctx.resume();
     };
 
-    const setHaze = async (on) => {
-      hazeOn = on;
-      stage.classList.toggle("hazeOn", hazeOn);
+    const setFX = async (on) => {
+      fxOn = on;
+      stage.classList.toggle("fxOn", fxOn);
 
-      if (!hazeOn) {
-        if (wetGain) wetGain.gain.value = 0.0;
-        if (noiseGain) noiseGain.gain.value = 0.0;
-        if (lowpass) lowpass.frequency.value = 2400;
-        if (highpass) highpass.frequency.value = 90;
-        if (preDelay) preDelay.delayTime.value = 0.020;
+      if (!fxOn) {
+        if (wet) wet.gain.setTargetAtTime(0.0, ctx ? ctx.currentTime : 0, 0.12);
+        if (dry) dry.gain.setTargetAtTime(1.0, ctx ? ctx.currentTime : 0, 0.12);
         return;
       }
 
       await ensureFX();
 
-      // “veil” settings
-      wetGain.gain.value = 0.42;
-      noiseGain.gain.value = 0.004;      // very faint; set to 0 if you want none
-      lowpass.frequency.value = 1700;
-      highpass.frequency.value = 120;
-      preDelay.delayTime.value = 0.030;
+      // More obvious space: wet up, dry down slightly
+      wet.gain.setTargetAtTime(0.62, ctx.currentTime, 0.18);
+      dry.gain.setTargetAtTime(0.75, ctx.currentTime, 0.18);
+
+      // darker
+      lp.frequency.setTargetAtTime(1700, ctx.currentTime, 0.35);
+
+      // slightly longer tail
+      fbL.gain.value = 0.32;
+      fbR.gain.value = 0.32;
     };
 
-    // ---- Player + jukebox ----
+    // ---- Player ----
     const fmt = (s) => {
       s = Math.max(0, Math.floor(s || 0));
       const m = Math.floor(s / 60);
@@ -543,8 +580,8 @@
       stage.classList.toggle("spinning", playing);
       btn.setAttribute("aria-label", playing ? "pause" : "play");
       updateTime();
-      if (!playing) stage.classList.remove("hazeOn");
-      else if (hazeOn) stage.classList.add("hazeOn");
+      if (!playing) stage.classList.remove("fxOn");
+      else if (fxOn) stage.classList.add("fxOn");
     };
 
     const pickRandomIndex = (exceptIdx) => {
@@ -572,8 +609,8 @@
       audio.load();
       updateTime();
 
-      // keep haze state across tracks (no forced reset)
-      if (hazeOn) setHaze(true);
+      // keep FX state across tracks
+      if (fxOn) setFX(true);
 
       if (autoplay) audio.play().catch(() => {});
     };
@@ -625,9 +662,9 @@
       setUI();
     });
 
-    hazeBtn.addEventListener("click", async () => {
+    fxBtn.addEventListener("click", async () => {
       if (!ready) return;
-      await setHaze(!hazeOn);
+      await setFX(!fxOn);
       setUI();
     });
 
@@ -637,9 +674,8 @@
     });
 
     audio.addEventListener("playing", async () => {
-      // ensure audio context exists only when user starts playback
-      if (hazeOn) await ensureFX();
-      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+      if (fxOn) await ensureFX();
+      if (ctx && ctx.state === "suspended") ctx.resume();
       setUI();
     });
     audio.addEventListener("pause", setUI);
