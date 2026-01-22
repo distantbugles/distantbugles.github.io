@@ -335,7 +335,6 @@
     .stage.spinning ~ .np .powerBtn{ border-color: rgba(176,24,24,.35); }
 
     .footer{ margin-top:18px; text-align:left; }
-
     .archiveNote{
       text-align:left;
       margin:18px 0 12px;
@@ -437,14 +436,15 @@
     let history = [];
     let ready = false;
 
-    // --- FX: very wet, ducked-ish, dark repeats ---
+    // --- FX: ducked-ish, dark, smeary ---
     let fxOn = false;
     let ctx = null;
     let src = null;
 
     let dry = null;
     let wet = null;
-    let wetComp = null;
+    let master = null;
+    let limiter = null;
 
     let dryLP = null;
 
@@ -487,27 +487,35 @@
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       src = ctx.createMediaElementSource(audio);
 
+      // IMPORTANT: prevent double-output (native + WebAudio)
+      audio.muted = true;
+
+      // master chain to prevent clipping everywhere
+      master = ctx.createGain();
+      master.gain.value = 0.92;
+
+      limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -12;
+      limiter.knee.value = 18;
+      limiter.ratio.value = 6.0;
+      limiter.attack.value = 0.003;
+      limiter.release.value = 0.22;
+
+      master.connect(limiter);
+      limiter.connect(ctx.destination);
+
       dry = ctx.createGain();
       wet = ctx.createGain();
-
-      wetComp = ctx.createDynamicsCompressor();
-      wetComp.threshold.value = -18;
-      wetComp.knee.value = 18;
-      wetComp.ratio.value = 3.2;
-      wetComp.attack.value = 0.003;
-      wetComp.release.value = 0.25;
-
       dry.gain.value = 1.0;
       wet.gain.value = 0.0;
 
-      // make the dry slightly softer when fx is on
       dryLP = ctx.createBiquadFilter();
       dryLP.type = "lowpass";
       dryLP.frequency.value = 20000;
 
       hp = ctx.createBiquadFilter();
       hp.type = "highpass";
-      hp.frequency.value = 120;
+      hp.frequency.value = 140;
 
       lp = ctx.createBiquadFilter();
       lp.type = "lowpass";
@@ -519,24 +527,22 @@
       dL = ctx.createDelay(1.2);
       dR = ctx.createDelay(1.2);
 
-      // SHORTER than before, more “cluster” / ambience
-      dL.delayTime.value = 0.28;
-      dR.delayTime.value = 0.42;
+      // shorter cluster
+      dL.delayTime.value = 0.26;
+      dR.delayTime.value = 0.39;
 
       fbL = ctx.createGain(); fbR = ctx.createGain();
-      fbL.gain.value = 0.55;
-      fbR.gain.value = 0.55;
+      fbL.gain.value = 0.58;
+      fbR.gain.value = 0.58;
 
-      // darken feedback so repeats smear
       fbFilterL = ctx.createBiquadFilter();
       fbFilterL.type = "lowpass";
-      fbFilterL.frequency.value = 2200;
+      fbFilterL.frequency.value = 1600;
 
       fbFilterR = ctx.createBiquadFilter();
       fbFilterR.type = "lowpass";
-      fbFilterR.frequency.value = 2200;
+      fbFilterR.frequency.value = 1600;
 
-      // cross feedback with filtering
       dL.connect(fbL); fbL.connect(fbFilterL); fbFilterL.connect(dR);
       dR.connect(fbR); fbR.connect(fbFilterR); fbFilterR.connect(dL);
 
@@ -554,12 +560,12 @@
       conv = ctx.createConvolver();
       conv.buffer = makeImpulse(ctx, 3.6, 4.8);
 
-      // DRY path
+      // DRY -> master
       src.connect(dryLP);
       dryLP.connect(dry);
-      dry.connect(ctx.destination);
+      dry.connect(master);
 
-      // WET path input
+      // WET input
       src.connect(hp);
       hp.connect(lp);
       lp.connect(preDelay);
@@ -569,16 +575,16 @@
       split.connect(dL, 0);
       split.connect(dR, 1);
 
-      // audible repeats + bloom
+      // repeats
       merge.connect(delayDirect);
       delayDirect.connect(wet);
 
+      // bloom
       merge.connect(delayToVerb);
       delayToVerb.connect(conv);
       conv.connect(wet);
 
-      wet.connect(wetComp);
-      wetComp.connect(ctx.destination);
+      wet.connect(master);
 
       if (ctx.state === "suspended") await ctx.resume();
     };
@@ -601,25 +607,21 @@
 
       await ensureFX();
 
-      // MUCH wetter / less identifiable:
-      wet.gain.setTargetAtTime(1.15, ctx.currentTime, 0.28);
-      dry.gain.setTargetAtTime(0.50, ctx.currentTime, 0.28);
+      // wetter, but safe (master + limiter stops clipping)
+      wet.gain.setTargetAtTime(1.10, ctx.currentTime, 0.28);
+      dry.gain.setTargetAtTime(0.52, ctx.currentTime, 0.28);
 
-      // make repeats + bloom really present
-      delayDirect.gain.setTargetAtTime(0.90, ctx.currentTime, 0.28);
+      delayDirect.gain.setTargetAtTime(0.95, ctx.currentTime, 0.28);
       delayToVerb.gain.setTargetAtTime(1.05, ctx.currentTime, 0.28);
 
-      // darker / more “memory”
-      lp.frequency.setTargetAtTime(1200, ctx.currentTime, 0.70);
-      dryLP.frequency.setTargetAtTime(3200, ctx.currentTime, 0.45);
+      lp.frequency.setTargetAtTime(1150, ctx.currentTime, 0.70);
+      dryLP.frequency.setTargetAtTime(2600, ctx.currentTime, 0.45);
 
-      // more feedback but stable
+      // keep feedback big but stable
       fbL.gain.value = 0.62;
       fbR.gain.value = 0.62;
-
-      // darker repeats over time
-      fbFilterL.frequency.setTargetAtTime(1600, ctx.currentTime, 0.9);
-      fbFilterR.frequency.setTargetAtTime(1600, ctx.currentTime, 0.9);
+      fbFilterL.frequency.setTargetAtTime(1350, ctx.currentTime, 0.9);
+      fbFilterR.frequency.setTargetAtTime(1350, ctx.currentTime, 0.9);
     };
 
     // ---- Player ----
@@ -658,6 +660,8 @@
       if (!t) return;
 
       currentIdx = idx;
+
+      // IMPORTANT: when changing src, if we are muted due to FX graph, keep it muted.
       audio.src = encodeURI(t.file);
 
       const title = (t.title || "").toLowerCase();
@@ -682,8 +686,10 @@
       setTrack(nextIdx, autoplay);
     };
 
+    // Power button: play/pause
     btn.addEventListener("click", async () => {
       if (!ready) return;
+
       try{
         if (audio.paused || audio.ended) {
           if (!audio.src) setTrack(pickRandomIndex(-1), false);
@@ -692,6 +698,12 @@
           audio.pause();
         }
       } catch(e) {}
+
+      // IMPORTANT: turning power off resets FX to OFF (your request)
+      if (audio.paused || audio.ended) {
+        await setFX(false);
+      }
+
       setUI();
     });
 
@@ -727,7 +739,9 @@
       setUI();
     });
 
-    audio.addEventListener("ended", () => {
+    audio.addEventListener("ended", async () => {
+      // Reset FX off at the end as well (keeps it intentional)
+      await setFX(false);
       playRandomNext(true);
       setUI();
     });
