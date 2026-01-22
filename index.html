@@ -237,24 +237,25 @@
     .navBtn:active{ transform: translateY(1px); }
 
     .navTri{
-      width:0;
-      height:0;
+      width:0;height:0;
       border-top:7px solid transparent;
       border-bottom:7px solid transparent;
     }
     .navTri.left{ border-right:11px solid var(--red); margin-left:-2px; }
     .navTri.right{ border-left:11px solid var(--red); margin-right:-2px; }
 
-    /* FX button look (very obvious when ON) */
-    .fxGlyph{
-      font-size:16px;
-      line-height:1;
-      color:rgba(0,0,0,.55);
-      transition: color 160ms ease;
+    /* FX button icon */
+    .fxIcon{
+      width:18px;
+      height:18px;
+      opacity:.85;
+      color: rgba(0,0,0,.55);
       position:relative;
       z-index:2;
+      transition: color 160ms ease, opacity 160ms ease;
     }
 
+    /* FX ON look */
     .stage.fxOn ~ .np #fxBtn{
       border-color: rgba(176,24,24,.55);
       background: rgba(176,24,24,.10);
@@ -262,9 +263,12 @@
         0 14px 30px rgba(176,24,24,.22),
         inset 0 0 0 1px rgba(255,255,255,.65);
     }
-    .stage.fxOn ~ .np #fxBtn .fxGlyph{ color:var(--red); }
+    .stage.fxOn ~ .np #fxBtn .fxIcon{
+      color: var(--red);
+      opacity: .95;
+      filter: drop-shadow(0 0 8px rgba(176,24,24,.22));
+    }
 
-    /* pulse ring */
     .stage.fxOn ~ .np #fxBtn::after{
       content:"";
       position:absolute;
@@ -272,14 +276,13 @@
       border-radius:999px;
       border:1px solid rgba(176,24,24,.35);
       z-index:1;
-      animation: fxPulse 1.4s ease-in-out infinite;
+      animation: fxPulse 1.2s ease-in-out infinite;
     }
     @keyframes fxPulse{
       0%,100%{ transform: scale(1); opacity:.45; }
-      50%{ transform: scale(1.08); opacity:.10; }
+      50%{ transform: scale(1.10); opacity:.10; }
     }
 
-    /* subtle swirling ink (background animation) */
     .stage.fxOn ~ .np #fxBtn::before{
       content:"";
       position:absolute;
@@ -292,9 +295,9 @@
         rgba(176,24,24,.00)
       );
       filter: blur(3px);
-      opacity:.65;
+      opacity:.70;
       z-index:0;
-      animation: fxSpin 2.8s linear infinite;
+      animation: fxSpin 2.2s linear infinite;
     }
     @keyframes fxSpin{ to { transform: rotate(360deg); } }
 
@@ -311,10 +314,8 @@
       border:2px solid rgba(0,0,0,.28);
       background: rgba(255,255,255,.94);
       border-radius:999px;
-      width:56px;
-      height:56px;
-      display:grid;
-      place-items:center;
+      width:56px;height:56px;
+      display:grid;place-items:center;
       cursor:pointer;
       box-shadow:
         0 10px 26px rgba(0,0,0,.12),
@@ -325,8 +326,7 @@
     .powerBtn:active{ transform: translateY(1px); }
 
     .powerIcon{
-      width:22px;
-      height:22px;
+      width:22px;height:22px;
       opacity:.90;
       color: rgba(0,0,0,.78);
       transition: color 200ms ease, filter 200ms ease;
@@ -382,7 +382,11 @@
             </button>
 
             <button class="navBtn" id="fxBtn" type="button" aria-label="space">
-              <span class="fxGlyph" aria-hidden="true">~</span>
+              <svg class="fxIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 8c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
+                <path d="M3 12c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
+                <path d="M3 16c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
+              </svg>
             </button>
 
             <button class="navBtn" id="nextBtn" type="button" aria-label="next">
@@ -437,12 +441,14 @@
     let history = [];
     let ready = false;
 
-    // --- FX graph: wetter + rhythmic ---
+    // FX: wet + rhythmic + ambient (no pitch change)
     let fxOn = false;
     let ctx = null;
     let src = null;
+
     let dry = null;
     let wet = null;
+    let wetComp = null;
 
     let hp = null;
     let lp = null;
@@ -455,12 +461,12 @@
     let fbL = null;
     let fbR = null;
 
-    let delayDirect = null;  // delay straight to wet (audible repeats)
-    let delayToVerb = null;  // delay into convolver (bloom)
+    let delayDirect = null;
+    let delayToVerb = null;
     let conv = null;
     let preDelay = null;
 
-    const makeImpulse = (ctx, seconds=3.2, decay=4.2) => {
+    const makeImpulse = (ctx, seconds=3.6, decay=4.6) => {
       const rate = ctx.sampleRate;
       const len = Math.floor(rate * seconds);
       const buf = ctx.createBuffer(2, len, rate);
@@ -482,6 +488,15 @@
 
       dry = ctx.createGain();
       wet = ctx.createGain();
+
+      // compressor to keep the wet wash from clipping when we go hard
+      wetComp = ctx.createDynamicsCompressor();
+      wetComp.threshold.value = -18;
+      wetComp.knee.value = 18;
+      wetComp.ratio.value = 3.2;
+      wetComp.attack.value = 0.003;
+      wetComp.release.value = 0.25;
+
       dry.gain.value = 1.0;
       wet.gain.value = 0.0;
 
@@ -493,38 +508,37 @@
       lp.type = "lowpass";
       lp.frequency.value = 9000;
 
-      // pingpong delays (fixed times = no zipper)
       split = ctx.createChannelSplitter(2);
       merge = ctx.createChannelMerger(2);
 
-      dL = ctx.createDelay(1.0);
-      dR = ctx.createDelay(1.0);
-      dL.delayTime.value = 0.36; // “quarter-ish”
-      dR.delayTime.value = 0.54; // offset for pingpong
+      dL = ctx.createDelay(1.2);
+      dR = ctx.createDelay(1.2);
+
+      // rhythmic, a little more “dotted-ish”
+      dL.delayTime.value = 0.42;
+      dR.delayTime.value = 0.63;
 
       fbL = ctx.createGain(); fbR = ctx.createGain();
-      fbL.gain.value = 0.38;
-      fbR.gain.value = 0.38;
+      fbL.gain.value = 0.44;
+      fbR.gain.value = 0.44;
 
-      // cross-feedback for pingpong
+      // cross feedback
       dL.connect(fbL); fbL.connect(dR);
       dR.connect(fbR); fbR.connect(dL);
 
-      // split -> delays -> merge (stereo taps)
       dL.connect(merge, 0, 0);
       dR.connect(merge, 0, 1);
 
-      // wet routing
       delayDirect = ctx.createGain();
       delayToVerb  = ctx.createGain();
       delayDirect.gain.value = 0.0;
       delayToVerb.gain.value = 0.0;
 
-      preDelay = ctx.createDelay(0.2);
-      preDelay.delayTime.value = 0.040;
+      preDelay = ctx.createDelay(0.25);
+      preDelay.delayTime.value = 0.050;
 
       conv = ctx.createConvolver();
-      conv.buffer = makeImpulse(ctx, 3.2, 4.2);
+      conv.buffer = makeImpulse(ctx, 3.6, 4.6);
 
       // dry path
       src.connect(dry);
@@ -535,21 +549,23 @@
       hp.connect(lp);
       lp.connect(preDelay);
 
-      // feed preDelay into pingpong
+      // into pingpong
       preDelay.connect(split);
       split.connect(dL, 0);
       split.connect(dR, 1);
 
-      // send some delay straight to wet (rhythm)
+      // audible repeats
       merge.connect(delayDirect);
       delayDirect.connect(wet);
 
-      // send some delay to reverb (wash)
+      // bloom
       merge.connect(delayToVerb);
       delayToVerb.connect(conv);
       conv.connect(wet);
 
-      wet.connect(ctx.destination);
+      // wet -> comp -> destination
+      wet.connect(wetComp);
+      wetComp.connect(ctx.destination);
 
       if (ctx.state === "suspended") await ctx.resume();
     };
@@ -559,27 +575,33 @@
       stage.classList.toggle("fxOn", fxOn);
 
       if (!fxOn) {
-        if (wet && ctx) wet.gain.setTargetAtTime(0.0, ctx.currentTime, 0.15);
-        if (dry && ctx) dry.gain.setTargetAtTime(1.0, ctx.currentTime, 0.15);
-        if (delayDirect && ctx) delayDirect.gain.setTargetAtTime(0.0, ctx.currentTime, 0.15);
-        if (delayToVerb && ctx) delayToVerb.gain.setTargetAtTime(0.0, ctx.currentTime, 0.15);
-        if (lp && ctx) lp.frequency.setTargetAtTime(9000, ctx.currentTime, 0.35);
+        if (ctx){
+          wet.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
+          dry.gain.setTargetAtTime(1.0, ctx.currentTime, 0.18);
+          delayDirect.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
+          delayToVerb.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
+          lp.frequency.setTargetAtTime(9000, ctx.currentTime, 0.45);
+        }
         return;
       }
 
       await ensureFX();
 
-      // Go wetter + no perceived drop:
-      // keep dry fairly strong, but add a lot of wet.
-      wet.gain.setTargetAtTime(0.85, ctx.currentTime, 0.20);
-      dry.gain.setTargetAtTime(0.90, ctx.currentTime, 0.20);
+      // GO WETTER:
+      // keep enough dry to retain rhythm, but let wet dominate.
+      wet.gain.setTargetAtTime(1.05, ctx.currentTime, 0.25);
+      dry.gain.setTargetAtTime(0.62, ctx.currentTime, 0.25);
 
-      // more obvious rhythmic taps + bloom
-      delayDirect.gain.setTargetAtTime(0.42, ctx.currentTime, 0.20);
-      delayToVerb.gain.setTargetAtTime(0.70, ctx.currentTime, 0.20);
+      // make repeats obvious + bloom bigger
+      delayDirect.gain.setTargetAtTime(0.78, ctx.currentTime, 0.25);
+      delayToVerb.gain.setTargetAtTime(1.00, ctx.currentTime, 0.25);
 
-      // darker, memory-like
-      lp.frequency.setTargetAtTime(2300, ctx.currentTime, 0.55);
+      // darker / more “memory”
+      lp.frequency.setTargetAtTime(1400, ctx.currentTime, 0.65);
+
+      // a touch more feedback (ambient)
+      fbL.gain.value = 0.50;
+      fbR.gain.value = 0.50;
     };
 
     // ---- Player ----
@@ -630,7 +652,6 @@
       audio.load();
       updateTime();
 
-      // keep FX state across tracks
       if (fxOn) setFX(true);
 
       if (autoplay) audio.play().catch(() => {});
@@ -645,7 +666,6 @@
 
     btn.addEventListener("click", async () => {
       if (!ready) return;
-
       try{
         if (audio.paused || audio.ended) {
           if (!audio.src) setTrack(pickRandomIndex(-1), false);
