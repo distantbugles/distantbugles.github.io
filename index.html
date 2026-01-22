@@ -151,7 +151,6 @@
 
     @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
     .stage.spinning .disc{ animation: spin 2.2s linear infinite; }
-
     @media (prefers-reduced-motion: reduce){
       .stage.spinning .disc{ animation:none; }
     }
@@ -244,18 +243,16 @@
     .navTri.left{ border-right:11px solid var(--red); margin-left:-2px; }
     .navTri.right{ border-left:11px solid var(--red); margin-right:-2px; }
 
-    /* FX button icon */
+    /* FX icon */
     .fxIcon{
-      width:18px;
-      height:18px;
+      width:18px;height:18px;
       opacity:.85;
       color: rgba(0,0,0,.55);
       position:relative;
       z-index:2;
-      transition: color 160ms ease, opacity 160ms ease;
+      transition: color 160ms ease, opacity 160ms ease, filter 160ms ease;
     }
 
-    /* FX ON look */
     .stage.fxOn ~ .np #fxBtn{
       border-color: rgba(176,24,24,.55);
       background: rgba(176,24,24,.10);
@@ -265,7 +262,7 @@
     }
     .stage.fxOn ~ .np #fxBtn .fxIcon{
       color: var(--red);
-      opacity: .95;
+      opacity:.95;
       filter: drop-shadow(0 0 8px rgba(176,24,24,.22));
     }
 
@@ -331,7 +328,6 @@
       color: rgba(0,0,0,.78);
       transition: color 200ms ease, filter 200ms ease;
     }
-
     .stage.spinning ~ .np .powerIcon{
       color: var(--red);
       filter: drop-shadow(0 0 9px rgba(176,24,24,.25));
@@ -381,7 +377,7 @@
               <span class="navTri left" aria-hidden="true"></span>
             </button>
 
-            <button class="navBtn" id="fxBtn" type="button" aria-label="space">
+            <button class="navBtn" id="fxBtn" type="button" aria-label="ambient">
               <svg class="fxIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M3 8c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
                 <path d="M3 12c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
@@ -441,7 +437,7 @@
     let history = [];
     let ready = false;
 
-    // FX: wet + rhythmic + ambient (no pitch change)
+    // --- FX: very wet, ducked-ish, dark repeats ---
     let fxOn = false;
     let ctx = null;
     let src = null;
@@ -449,6 +445,8 @@
     let dry = null;
     let wet = null;
     let wetComp = null;
+
+    let dryLP = null;
 
     let hp = null;
     let lp = null;
@@ -461,12 +459,15 @@
     let fbL = null;
     let fbR = null;
 
+    let fbFilterL = null;
+    let fbFilterR = null;
+
     let delayDirect = null;
     let delayToVerb = null;
     let conv = null;
     let preDelay = null;
 
-    const makeImpulse = (ctx, seconds=3.6, decay=4.6) => {
+    const makeImpulse = (ctx, seconds=3.6, decay=4.8) => {
       const rate = ctx.sampleRate;
       const len = Math.floor(rate * seconds);
       const buf = ctx.createBuffer(2, len, rate);
@@ -489,7 +490,6 @@
       dry = ctx.createGain();
       wet = ctx.createGain();
 
-      // compressor to keep the wet wash from clipping when we go hard
       wetComp = ctx.createDynamicsCompressor();
       wetComp.threshold.value = -18;
       wetComp.knee.value = 18;
@@ -499,6 +499,11 @@
 
       dry.gain.value = 1.0;
       wet.gain.value = 0.0;
+
+      // make the dry slightly softer when fx is on
+      dryLP = ctx.createBiquadFilter();
+      dryLP.type = "lowpass";
+      dryLP.frequency.value = 20000;
 
       hp = ctx.createBiquadFilter();
       hp.type = "highpass";
@@ -514,17 +519,26 @@
       dL = ctx.createDelay(1.2);
       dR = ctx.createDelay(1.2);
 
-      // rhythmic, a little more “dotted-ish”
-      dL.delayTime.value = 0.42;
-      dR.delayTime.value = 0.63;
+      // SHORTER than before, more “cluster” / ambience
+      dL.delayTime.value = 0.28;
+      dR.delayTime.value = 0.42;
 
       fbL = ctx.createGain(); fbR = ctx.createGain();
-      fbL.gain.value = 0.44;
-      fbR.gain.value = 0.44;
+      fbL.gain.value = 0.55;
+      fbR.gain.value = 0.55;
 
-      // cross feedback
-      dL.connect(fbL); fbL.connect(dR);
-      dR.connect(fbR); fbR.connect(dL);
+      // darken feedback so repeats smear
+      fbFilterL = ctx.createBiquadFilter();
+      fbFilterL.type = "lowpass";
+      fbFilterL.frequency.value = 2200;
+
+      fbFilterR = ctx.createBiquadFilter();
+      fbFilterR.type = "lowpass";
+      fbFilterR.frequency.value = 2200;
+
+      // cross feedback with filtering
+      dL.connect(fbL); fbL.connect(fbFilterL); fbFilterL.connect(dR);
+      dR.connect(fbR); fbR.connect(fbFilterR); fbFilterR.connect(dL);
 
       dL.connect(merge, 0, 0);
       dR.connect(merge, 0, 1);
@@ -538,13 +552,14 @@
       preDelay.delayTime.value = 0.050;
 
       conv = ctx.createConvolver();
-      conv.buffer = makeImpulse(ctx, 3.6, 4.6);
+      conv.buffer = makeImpulse(ctx, 3.6, 4.8);
 
-      // dry path
-      src.connect(dry);
+      // DRY path
+      src.connect(dryLP);
+      dryLP.connect(dry);
       dry.connect(ctx.destination);
 
-      // wet path input
+      // WET path input
       src.connect(hp);
       hp.connect(lp);
       lp.connect(preDelay);
@@ -554,16 +569,14 @@
       split.connect(dL, 0);
       split.connect(dR, 1);
 
-      // audible repeats
+      // audible repeats + bloom
       merge.connect(delayDirect);
       delayDirect.connect(wet);
 
-      // bloom
       merge.connect(delayToVerb);
       delayToVerb.connect(conv);
       conv.connect(wet);
 
-      // wet -> comp -> destination
       wet.connect(wetComp);
       wetComp.connect(ctx.destination);
 
@@ -581,27 +594,32 @@
           delayDirect.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
           delayToVerb.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
           lp.frequency.setTargetAtTime(9000, ctx.currentTime, 0.45);
+          dryLP.frequency.setTargetAtTime(20000, ctx.currentTime, 0.25);
         }
         return;
       }
 
       await ensureFX();
 
-      // GO WETTER:
-      // keep enough dry to retain rhythm, but let wet dominate.
-      wet.gain.setTargetAtTime(1.05, ctx.currentTime, 0.25);
-      dry.gain.setTargetAtTime(0.62, ctx.currentTime, 0.25);
+      // MUCH wetter / less identifiable:
+      wet.gain.setTargetAtTime(1.15, ctx.currentTime, 0.28);
+      dry.gain.setTargetAtTime(0.50, ctx.currentTime, 0.28);
 
-      // make repeats obvious + bloom bigger
-      delayDirect.gain.setTargetAtTime(0.78, ctx.currentTime, 0.25);
-      delayToVerb.gain.setTargetAtTime(1.00, ctx.currentTime, 0.25);
+      // make repeats + bloom really present
+      delayDirect.gain.setTargetAtTime(0.90, ctx.currentTime, 0.28);
+      delayToVerb.gain.setTargetAtTime(1.05, ctx.currentTime, 0.28);
 
       // darker / more “memory”
-      lp.frequency.setTargetAtTime(1400, ctx.currentTime, 0.65);
+      lp.frequency.setTargetAtTime(1200, ctx.currentTime, 0.70);
+      dryLP.frequency.setTargetAtTime(3200, ctx.currentTime, 0.45);
 
-      // a touch more feedback (ambient)
-      fbL.gain.value = 0.50;
-      fbR.gain.value = 0.50;
+      // more feedback but stable
+      fbL.gain.value = 0.62;
+      fbR.gain.value = 0.62;
+
+      // darker repeats over time
+      fbFilterL.frequency.setTargetAtTime(1600, ctx.currentTime, 0.9);
+      fbFilterR.frequency.setTargetAtTime(1600, ctx.currentTime, 0.9);
     };
 
     // ---- Player ----
