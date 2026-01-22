@@ -235,11 +235,7 @@
     }
     .navBtn:active{ transform: translateY(1px); }
 
-    .navTri{
-      width:0;height:0;
-      border-top:7px solid transparent;
-      border-bottom:7px solid transparent;
-    }
+    .navTri{ width:0;height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; }
     .navTri.left{ border-right:11px solid var(--red); margin-left:-2px; }
     .navTri.right{ border-left:11px solid var(--red); margin-right:-2px; }
 
@@ -343,7 +339,7 @@
       text-transform:lowercase;
     }
 
-    audio{ display:none; }
+    audio{ display:block; position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
   </style>
 </head>
 
@@ -401,9 +397,7 @@
 
     <div class="footer">
       <p class="archiveNote">past releases, works-in-progress, and new recordings as they’re finished (including cherry twister and fauna flora).</p>
-
       <p class="small">if you hear something you want: email me a lyric, a timestamp, or a description.</p>
-
       <p class="small">
         <a href="https://ko-fi.com/distantbugles" target="_blank" rel="noopener noreferrer">tip</a>
         <span style="margin:0 10px;">·</span>
@@ -436,36 +430,15 @@
     let history = [];
     let ready = false;
 
-    // --- FX: ducked-ish, dark, smeary ---
     let fxOn = false;
-    let ctx = null;
-    let src = null;
 
-    let dry = null;
-    let wet = null;
-    let master = null;
-    let limiter = null;
-
-    let dryLP = null;
-
-    let hp = null;
-    let lp = null;
-
-    let split = null;
-    let merge = null;
-
-    let dL = null;
-    let dR = null;
-    let fbL = null;
-    let fbR = null;
-
-    let fbFilterL = null;
-    let fbFilterR = null;
-
-    let delayDirect = null;
-    let delayToVerb = null;
-    let conv = null;
-    let preDelay = null;
+    // WebAudio graph (only created when FX is first engaged)
+    let ctx = null, src = null;
+    let dry = null, wet = null, master = null, limiter = null;
+    let dryLP = null, hp = null, lp = null;
+    let split = null, merge = null, dL = null, dR = null, fbL = null, fbR = null;
+    let fbFilterL = null, fbFilterR = null;
+    let delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
 
     const makeImpulse = (ctx, seconds=3.6, decay=4.8) => {
       const rate = ctx.sampleRate;
@@ -487,17 +460,16 @@
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       src = ctx.createMediaElementSource(audio);
 
-      // IMPORTANT: prevent double-output (native + WebAudio)
-      audio.muted = true;
+      // IMPORTANT: eliminate double-audio safely
+      audio.volume = 0;
 
-      // master chain to prevent clipping everywhere
       master = ctx.createGain();
-      master.gain.value = 0.92;
+      master.gain.value = 0.88; // headroom
 
       limiter = ctx.createDynamicsCompressor();
-      limiter.threshold.value = -12;
+      limiter.threshold.value = -10;
       limiter.knee.value = 18;
-      limiter.ratio.value = 6.0;
+      limiter.ratio.value = 8.0;
       limiter.attack.value = 0.003;
       limiter.release.value = 0.22;
 
@@ -506,7 +478,7 @@
 
       dry = ctx.createGain();
       wet = ctx.createGain();
-      dry.gain.value = 1.0;
+      dry.gain.value = 0.0;
       wet.gain.value = 0.0;
 
       dryLP = ctx.createBiquadFilter();
@@ -532,16 +504,16 @@
       dR.delayTime.value = 0.39;
 
       fbL = ctx.createGain(); fbR = ctx.createGain();
-      fbL.gain.value = 0.58;
-      fbR.gain.value = 0.58;
+      fbL.gain.value = 0.62;
+      fbR.gain.value = 0.62;
 
       fbFilterL = ctx.createBiquadFilter();
       fbFilterL.type = "lowpass";
-      fbFilterL.frequency.value = 1600;
+      fbFilterL.frequency.value = 1350;
 
       fbFilterR = ctx.createBiquadFilter();
       fbFilterR.type = "lowpass";
-      fbFilterR.frequency.value = 1600;
+      fbFilterR.frequency.value = 1350;
 
       dL.connect(fbL); fbL.connect(fbFilterL); fbFilterL.connect(dR);
       dR.connect(fbR); fbR.connect(fbFilterR); fbFilterR.connect(dL);
@@ -570,16 +542,13 @@
       hp.connect(lp);
       lp.connect(preDelay);
 
-      // into pingpong
       preDelay.connect(split);
       split.connect(dL, 0);
       split.connect(dR, 1);
 
-      // repeats
       merge.connect(delayDirect);
       delayDirect.connect(wet);
 
-      // bloom
       merge.connect(delayToVerb);
       delayToVerb.connect(conv);
       conv.connect(wet);
@@ -594,9 +563,12 @@
       stage.classList.toggle("fxOn", fxOn);
 
       if (!fxOn) {
-        if (ctx){
+        // restore normal playback always
+        audio.volume = 1;
+
+        if (ctx) {
           wet.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
-          dry.gain.setTargetAtTime(1.0, ctx.currentTime, 0.18);
+          dry.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
           delayDirect.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
           delayToVerb.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
           lp.frequency.setTargetAtTime(9000, ctx.currentTime, 0.45);
@@ -607,7 +579,10 @@
 
       await ensureFX();
 
-      // wetter, but safe (master + limiter stops clipping)
+      // FX ON: use webaudio only
+      audio.volume = 0;
+
+      // very wet, but stable (master+limiter)
       wet.gain.setTargetAtTime(1.10, ctx.currentTime, 0.28);
       dry.gain.setTargetAtTime(0.52, ctx.currentTime, 0.28);
 
@@ -616,15 +591,8 @@
 
       lp.frequency.setTargetAtTime(1150, ctx.currentTime, 0.70);
       dryLP.frequency.setTargetAtTime(2600, ctx.currentTime, 0.45);
-
-      // keep feedback big but stable
-      fbL.gain.value = 0.62;
-      fbR.gain.value = 0.62;
-      fbFilterL.frequency.setTargetAtTime(1350, ctx.currentTime, 0.9);
-      fbFilterR.frequency.setTargetAtTime(1350, ctx.currentTime, 0.9);
     };
 
-    // ---- Player ----
     const fmt = (s) => {
       s = Math.max(0, Math.floor(s || 0));
       const m = Math.floor(s / 60);
@@ -660,8 +628,6 @@
       if (!t) return;
 
       currentIdx = idx;
-
-      // IMPORTANT: when changing src, if we are muted due to FX graph, keep it muted.
       audio.src = encodeURI(t.file);
 
       const title = (t.title || "").toLowerCase();
@@ -674,6 +640,7 @@
       audio.load();
       updateTime();
 
+      // keep FX state (and volume routing) across tracks
       if (fxOn) setFX(true);
 
       if (autoplay) audio.play().catch(() => {});
@@ -686,7 +653,6 @@
       setTrack(nextIdx, autoplay);
     };
 
-    // Power button: play/pause
     btn.addEventListener("click", async () => {
       if (!ready) return;
 
@@ -699,10 +665,8 @@
         }
       } catch(e) {}
 
-      // IMPORTANT: turning power off resets FX to OFF (your request)
-      if (audio.paused || audio.ended) {
-        await setFX(false);
-      }
+      // Reset FX OFF when powering off (intentionality)
+      if (audio.paused || audio.ended) await setFX(false);
 
       setUI();
     });
@@ -740,17 +704,19 @@
     });
 
     audio.addEventListener("ended", async () => {
-      // Reset FX off at the end as well (keeps it intentional)
       await setFX(false);
       playRandomNext(true);
       setUI();
     });
 
     audio.addEventListener("playing", async () => {
-      if (fxOn) await ensureFX();
-      if (ctx && ctx.state === "suspended") ctx.resume();
+      if (fxOn) {
+        await ensureFX();
+        if (ctx && ctx.state === "suspended") ctx.resume();
+      }
       setUI();
     });
+
     audio.addEventListener("pause", setUI);
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
