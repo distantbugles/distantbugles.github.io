@@ -104,7 +104,6 @@
       pointer-events:none;
       transition: opacity 200ms ease;
       transform-origin: 50% 50%;
-      /* hard circle mask to prevent "rotating square" artifacts on iOS */
       -webkit-mask-image: radial-gradient(circle at center, #000 0 62%, transparent 64%);
       mask-image: radial-gradient(circle at center, #000 0 62%, transparent 64%);
       -webkit-mask-repeat:no-repeat;
@@ -292,8 +291,8 @@
       display:flex;
       justify-content:center;
       align-items:flex-end;
-      gap:12px;
-      margin-top:10px;
+      gap:24px;
+      margin-top:14px;
       margin-bottom:2px;
       opacity:.55;
       transition: opacity 160ms ease;
@@ -305,14 +304,42 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:6px;
+      gap:7px;
+      position:relative;
     }
+
     .slotLabel{
       font-size:10px;
-      color:rgba(0,0,0,.40);
-      letter-spacing:.12em;
+      color:rgba(0,0,0,.46);
+      letter-spacing:.16em;
       text-transform:lowercase;
       user-select:none;
+    }
+
+    .slotTicks{
+      position:absolute;
+      opacity:.35;
+      pointer-events:none;
+    }
+    .slotTicksH{
+      width:210px;
+      height:8px;
+      top:2px;
+      background: repeating-linear-gradient(
+        to right,
+        rgba(0,0,0,.18) 0 1px,
+        rgba(0,0,0,0) 1px 14px
+      );
+    }
+    .slotTicksV{
+      width:8px;
+      height:92px;
+      top:2px;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,.18) 0 1px,
+        rgba(0,0,0,0) 1px 12px
+      );
     }
 
     input[type="range"]{
@@ -322,7 +349,7 @@
     }
 
     input.scrub{
-      width:200px;
+      width:210px;
       height:22px;
       cursor:pointer;
     }
@@ -343,7 +370,6 @@
       box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
       margin-top:-3px;
     }
-
     input.scrub::-moz-range-track{
       height:8px;
       border-radius:999px;
@@ -359,16 +385,22 @@
       box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
     }
 
-    /* volume slider (vertical) */
+    /* volume slider: true vertical (rotate a normal range), works in Firefox */
+    .volShell{
+      width:22px;
+      height:92px;
+      display:grid;
+      place-items:center;
+    }
     input.vol{
-      width:20px;
-      height:78px;
+      width:92px;
+      height:22px;
       cursor:pointer;
-      writing-mode: bt-lr;
-      -webkit-appearance: slider-vertical;
+      transform: rotate(-90deg);
+      transform-origin:center;
     }
     input.vol::-webkit-slider-runnable-track{
-      width:8px;
+      height:8px;
       border-radius:999px;
       background: rgba(0,0,0,.12);
       box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
@@ -382,11 +414,10 @@
       background: rgba(255,255,255,.92);
       border:1px solid rgba(0,0,0,.18);
       box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
-      margin-left:-3px;
+      margin-top:-5px;
     }
-
     input.vol::-moz-range-track{
-      width:8px;
+      height:8px;
       border-radius:999px;
       background: rgba(0,0,0,.12);
       box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
@@ -402,11 +433,14 @@
 
     input:disabled{ opacity:.25; cursor:default; }
 
-    /* touch-friendly tweaks ONLY on coarse pointers (phones) */
     @media (pointer: coarse){
       input.scrub{ height:28px; }
       input.scrub::-webkit-slider-thumb{ width:22px; height:18px; margin-top:-5px; }
       input.scrub::-moz-range-thumb{ width:22px; height:18px; }
+
+      /* slightly taller vol thumb on touch */
+      input.vol::-webkit-slider-thumb{ height:20px; }
+      input.vol::-moz-range-thumb{ height:20px; }
     }
 
     .audioHidden{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
@@ -425,7 +459,6 @@
           <div class="discGrooves"></div>
           <div class="discSheen"></div>
 
-          <!-- psychedelic overlays (fx only) -->
           <div class="psy"></div>
           <div class="psy2"></div>
 
@@ -463,20 +496,24 @@
 
         <button id="toggle" class="powerBtn" type="button" aria-label="play or pause">
           <svg class="powerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 2v9"></path>
-            <path d="M7.5 4.8a8 8 0 1 0 9 0"></path>
+                <path d="M12 2v9"></path>
+                <path d="M7.5 4.8a8 8 0 1 0 9 0"></path>
           </svg>
         </button>
       </div>
 
       <div class="scrubWrap" aria-label="controls">
-        <div class="slotGroup">
+        <div class="slotGroup posGroup">
+          <div class="slotTicks slotTicksH" aria-hidden="true"></div>
           <input id="scrub" class="scrub" type="range" min="0" max="1000" value="0" step="1" disabled />
           <div class="slotLabel">pos</div>
         </div>
 
-        <div class="slotGroup">
-          <input id="vol" class="vol" type="range" min="0" max="100" value="85" step="1" />
+        <div class="slotGroup volGroup">
+          <div class="slotTicks slotTicksV" aria-hidden="true"></div>
+          <div class="volShell">
+            <input id="vol" class="vol" type="range" min="0" max="100" value="85" step="1" />
+          </div>
           <div class="slotLabel">vol</div>
         </div>
       </div>
@@ -525,11 +562,9 @@
     // WebAudio graph (dry + wet)
     let ctx = null, src = null;
     let dryGain = null, wetGain = null, master = null, limiter = null;
-
     let hp = null, lp = null;
     let split = null, merge = null, dL = null, dR = null, fbL = null, fbR = null;
-    let fbFilterL = null, fbFilterR = null;
-    let delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
+    let fbFilterL = null, fbFilterR = null, delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
 
     let scrubbing = false;
     let wasPlaying = false;
@@ -637,7 +672,7 @@
       delayToVerb.connect(conv);
       conv.connect(wetGain);
 
-      // set volume from slider
+      // initial volume from slider
       const v = Math.max(0, Math.min(100, Number(vol.value))) / 100;
       const gain = Math.pow(v, 1.6);
       master.gain.value = 0.15 + gain * 0.95;
@@ -734,7 +769,6 @@
       setTrack(nextIdx, autoplay);
     };
 
-    // power: play/pause + reset FX off when powering off
     btn.addEventListener("click", async () => {
       if (!ready) return;
       if (!ctx) await ensureGraph();
@@ -753,7 +787,6 @@
       setUI();
     });
 
-    // next/prev also reset FX
     nextBtn.addEventListener("click", async () => {
       if (!ready) return;
       await setFX(false);
@@ -803,7 +836,7 @@
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
 
-    // Scrubber: pause while dragging; seek on release (no zipper)
+    /* Scrubber: pause while dragging; seek on release */
     const durSafe = () => (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
 
     scrub.addEventListener("pointerdown", () => {
@@ -832,7 +865,6 @@
       if (scrubbing) timeEl.textContent = `${fmt(pendingTime)} / ${fmt(dur)}`;
     });
 
-    // volume slider -> master gain
     vol.addEventListener("input", async () => {
       if (!ctx) await ensureGraph();
       await applyVolume();
