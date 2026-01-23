@@ -202,6 +202,67 @@
       text-transform:lowercase;
     }
 
+    /* NEW: metal-slot scrubber (always visible) */
+    .scrubWrap{
+      display:flex;
+      justify-content:center;
+      margin-top:10px;
+      margin-bottom:2px;
+      opacity:.55;
+      transition: opacity 160ms ease;
+    }
+    .scrubWrap:focus-within,
+    .scrubWrap:hover{ opacity:.85; }
+
+    input[type="range"].scrub{
+      -webkit-appearance:none;
+      appearance:none;
+      width:190px;
+      height:18px;
+      background: transparent;
+      cursor:pointer;
+    }
+
+    /* track */
+    input[type="range"].scrub::-webkit-slider-runnable-track{
+      height:6px;
+      border-radius:999px;
+      background: rgba(0,0,0,.12);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+    }
+    input[type="range"].scrub::-moz-range-track{
+      height:6px;
+      border-radius:999px;
+      background: rgba(0,0,0,.12);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+    }
+
+    /* thumb (little “metal” slider) */
+    input[type="range"].scrub::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:16px;
+      height:12px;
+      border-radius:4px;
+      background: rgba(255,255,255,.92);
+      border:1px solid rgba(0,0,0,.18);
+      box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
+      margin-top:-3px;
+    }
+    input[type="range"].scrub::-moz-range-thumb{
+      width:16px;
+      height:12px;
+      border-radius:4px;
+      background: rgba(255,255,255,.92);
+      border:1px solid rgba(0,0,0,.18);
+      box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
+    }
+
+    input[type="range"].scrub:disabled{
+      opacity:.25;
+      cursor:default;
+    }
+
     .audioHidden{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
   </style>
 </head>
@@ -256,6 +317,11 @@
           </svg>
         </button>
       </div>
+
+      <!-- Scrubber: always visible -->
+      <div class="scrubWrap" aria-label="position">
+        <input id="scrub" class="scrub" type="range" min="0" max="1000" value="0" step="1" disabled />
+      </div>
     </div>
 
     <div class="footer">
@@ -281,12 +347,14 @@
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
     const fxBtn = document.getElementById("fxBtn");
+    const scrub = document.getElementById("scrub");
+
     const titleEl = document.getElementById("trackTitle");
     const artistEl = document.getElementById("trackArtist");
     const artistLine = document.getElementById("artistLine");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !fxBtn || !titleEl || !artistEl || !artistLine || !timeEl) return;
+    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !fxBtn || !scrub || !titleEl || !artistEl || !artistLine || !timeEl) return;
 
     let tracks = [];
     let currentIdx = -1;
@@ -295,13 +363,16 @@
 
     let fxOn = false;
 
-    // WebAudio graph (Safari requires routing after MediaElementSource is created)
+    // WebAudio graph (dry + wet)
     let ctx = null, src = null;
     let dryGain = null, wetGain = null, master = null, limiter = null;
+
     let hp = null, lp = null;
     let split = null, merge = null, dL = null, dR = null, fbL = null, fbR = null;
-    let fbFilterL = null, fbFilterR = null;
-    let delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
+    let fbFilterL = null, fbFilterR = null, delayDirect = null, delayToVerb = null;
+    let conv = null, preDelay = null;
+
+    let scrubbing = false;
 
     const makeImpulse = (ctx, seconds=3.2, decay=4.2) => {
       const rate = ctx.sampleRate;
@@ -336,7 +407,7 @@
       master.connect(limiter);
       limiter.connect(ctx.destination);
 
-      // dry always routed (prevents silence when fx is off)
+      // dry always routed
       dryGain = ctx.createGain();
       dryGain.gain.value = 1.0;
       src.connect(dryGain);
@@ -419,14 +490,13 @@
       if (ctx.state === "suspended") await ctx.resume();
 
       if (!fxOn) {
-        // NORMAL
         wetGain.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
         dryGain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.18);
         lp.frequency.setTargetAtTime(9000, ctx.currentTime, 0.45);
         return;
       }
 
-      // FX ON (your current “good” sound)
+      // FX ON
       wetGain.gain.setTargetAtTime(1.15, ctx.currentTime, 0.28);
       dryGain.gain.setTargetAtTime(0.70, ctx.currentTime, 0.28);
       lp.frequency.setTargetAtTime(1150, ctx.currentTime, 0.70);
@@ -443,6 +513,13 @@
       const cur = audio.currentTime || 0;
       const dur = (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
       timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
+
+      // enable scrubber when duration is known
+      scrub.disabled = !(dur > 0);
+
+      if (!scrubbing && dur > 0) {
+        scrub.value = Math.round((cur / dur) * 1000);
+      }
     };
 
     const setUI = () => {
@@ -489,10 +566,11 @@
       setTrack(nextIdx, autoplay);
     };
 
+    // power button: play/pause
     btn.addEventListener("click", async () => {
       if (!ready) return;
 
-      // ensure graph once (Safari safety)
+      // ensure graph once (Safari reliability), even if FX never used
       if (!ctx) await ensureGraph();
 
       try{
@@ -504,7 +582,7 @@
         }
       } catch(e) {}
 
-      // power off resets fx
+      // power off resets fx off
       if (audio.paused || audio.ended) await setFX(false);
 
       setUI();
@@ -543,7 +621,7 @@
     });
 
     audio.addEventListener("ended", async () => {
-      await setFX(false);
+      await setFX(false); // intentional reset between tracks
       playRandomNext(true);
       setUI();
     });
@@ -552,17 +630,34 @@
       if (ctx && ctx.state === "suspended") ctx.resume();
       setUI();
     });
+
     audio.addEventListener("pause", setUI);
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
+
+    // Scrubber interactions
+    const seekToScrub = () => {
+      const dur = (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
+      if (!(dur > 0)) return;
+      const frac = Number(scrub.value) / 1000;
+      audio.currentTime = dur * frac;
+      updateTime();
+    };
+
+    scrub.addEventListener("pointerdown", () => { scrubbing = true; });
+    window.addEventListener("pointerup", () => { scrubbing = false; });
+
+    scrub.addEventListener("input", () => { seekToScrub(); });
 
     fetch("playlist.json", { cache: "no-store" })
       .then(r => r.json())
       .then(list => {
         tracks = Array.isArray(list) ? list : [];
         ready = tracks.length > 0;
+
         if (ready) setTrack(pickRandomIndex(-1), false);
         else titleEl.textContent = "no tracks";
+
         setUI();
       })
       .catch(() => {
