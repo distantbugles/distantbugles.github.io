@@ -10,7 +10,6 @@
       --fg:#111;
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
-      --rule:rgba(0,0,0,.10);
       --panel:#f6f6f4;
 
       --red:#b01818;
@@ -67,6 +66,7 @@
         radial-gradient(circle at 50% 45%, rgba(255,255,255,.05), rgba(0,0,0,0) 55%),
         radial-gradient(circle at center, #2a2a2c 0%, #111114 62%, #0b0b0c 100%);
     }
+
     .discGrooves{
       position:absolute; inset:0; border-radius:50%; opacity:.24;
       background: repeating-radial-gradient(circle at center,
@@ -82,6 +82,7 @@
       position:absolute; inset:-35%;
       border-radius:50%;
       opacity:.32;
+      transition:opacity 220ms ease;
       background: conic-gradient(
         from 0deg,
         rgba(255,255,255,0.00) 0deg, rgba(255,255,255,0.14) 22deg,
@@ -91,47 +92,53 @@
       );
       mix-blend-mode: screen;
       pointer-events:none;
-      transition: opacity 220ms ease;
     }
     .stage.fxOn .discSheen{ opacity:.50; }
 
-    /* psychedelic overlay (hidden unless FX ON) */
-    .psy{
+    /* FX visuals — strictly circular (WebKit-safe) */
+    .psy, .psy2{
       position:absolute;
       inset:-40%;
       border-radius:50%;
       opacity:0;
       pointer-events:none;
-      mix-blend-mode: screen;
-      filter: saturate(1.35) contrast(1.05);
       transition: opacity 200ms ease;
-      background:
-        conic-gradient(from 0deg,
-          rgba(255, 40, 120,.00),
-          rgba(255, 40, 120,.45),
-          rgba(60, 255, 200,.00),
-          rgba(60, 255, 200,.45),
-          rgba(255, 220, 40,.00),
-          rgba(255, 220, 40,.45),
-          rgba(120, 80, 255,.00),
-          rgba(120, 80, 255,.45),
-          rgba(255, 40, 120,.00)
-        );
+      transform-origin: 50% 50%;
+      /* hard circle mask to prevent "rotating square" artifacts on iOS */
+      -webkit-mask-image: radial-gradient(circle at center, #000 0 62%, transparent 64%);
+      mask-image: radial-gradient(circle at center, #000 0 62%, transparent 64%);
+      -webkit-mask-repeat:no-repeat;
+      mask-repeat:no-repeat;
+      -webkit-mask-position:center;
+      mask-position:center;
+      -webkit-mask-size:100% 100%;
+      mask-size:100% 100%;
+    }
+
+    .psy{
+      mix-blend-mode: screen;
+      filter: saturate(1.4) contrast(1.1);
+      background: conic-gradient(from 0deg,
+        rgba(255, 40, 120,.00),
+        rgba(255, 40, 120,.45),
+        rgba(60, 255, 200,.00),
+        rgba(60, 255, 200,.45),
+        rgba(255, 220, 40,.00),
+        rgba(255, 220, 40,.45),
+        rgba(120, 80, 255,.00),
+        rgba(120, 80, 255,.45),
+        rgba(255, 40, 120,.00)
+      );
       animation: psySpin 2.4s linear infinite;
     }
+
     .psy2{
-      position:absolute;
-      inset:-20%;
-      border-radius:50%;
-      opacity:0;
-      pointer-events:none;
       mix-blend-mode: overlay;
-      transition: opacity 200ms ease;
       background:
-        radial-gradient(circle at 30% 30%, rgba(255,120,0,.55), rgba(0,0,0,0) 40%),
-        radial-gradient(circle at 70% 35%, rgba(0,255,190,.45), rgba(0,0,0,0) 38%),
-        radial-gradient(circle at 55% 70%, rgba(255,0,110,.45), rgba(0,0,0,0) 42%),
-        radial-gradient(circle at 35% 75%, rgba(255,240,0,.35), rgba(0,0,0,0) 45%);
+        radial-gradient(circle at 30% 30%, rgba(255,120,0,.55), rgba(0,0,0,0) 42%),
+        radial-gradient(circle at 70% 35%, rgba(0,255,190,.45), rgba(0,0,0,0) 40%),
+        radial-gradient(circle at 55% 70%, rgba(255,0,110,.45), rgba(0,0,0,0) 44%),
+        radial-gradient(circle at 35% 75%, rgba(255,240,0,.35), rgba(0,0,0,0) 48%);
       animation: psyBreath 1.9s ease-in-out infinite;
     }
 
@@ -153,7 +160,9 @@
       box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.08);
       display:flex; justify-content:center; align-items:center;
       transition: background 220ms ease, border-color 220ms ease;
+      z-index:5;
     }
+
     .stage.spinning .label{
       background:
         radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
@@ -171,7 +180,6 @@
 
     @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
     .stage.spinning .disc{ animation: spin 2.2s linear infinite; }
-    /* spin backwards in FX mode */
     .stage.fxOn.spinning .disc{ animation-direction: reverse; }
 
     @media (prefers-reduced-motion: reduce){
@@ -279,10 +287,12 @@
       text-transform:lowercase;
     }
 
-    /* metal-slot scrubber */
+    /* sliders (pos + vol) */
     .scrubWrap{
       display:flex;
       justify-content:center;
+      align-items:flex-end;
+      gap:12px;
       margin-top:10px;
       margin-bottom:2px;
       opacity:.55;
@@ -291,51 +301,112 @@
     .scrubWrap:focus-within,
     .scrubWrap:hover{ opacity:.85; }
 
-    input[type="range"].scrub{
+    .slotGroup{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+    }
+    .slotLabel{
+      font-size:10px;
+      color:rgba(0,0,0,.40);
+      letter-spacing:.12em;
+      text-transform:lowercase;
+      user-select:none;
+    }
+
+    input[type="range"]{
       -webkit-appearance:none;
       appearance:none;
-      width:190px;
-      height:18px;
       background: transparent;
+    }
+
+    input.scrub{
+      width:200px;
+      height:22px;
       cursor:pointer;
     }
-
-    input[type="range"].scrub::-webkit-slider-runnable-track{
-      height:6px;
+    input.scrub::-webkit-slider-runnable-track{
+      height:8px;
       border-radius:999px;
       background: rgba(0,0,0,.12);
       box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
     }
-    input[type="range"].scrub::-moz-range-track{
-      height:6px;
-      border-radius:999px;
-      background: rgba(0,0,0,.12);
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
-    }
-
-    input[type="range"].scrub::-webkit-slider-thumb{
+    input.scrub::-webkit-slider-thumb{
       -webkit-appearance:none;
       appearance:none;
-      width:16px;
-      height:12px;
-      border-radius:4px;
+      width:18px;
+      height:14px;
+      border-radius:5px;
       background: rgba(255,255,255,.92);
       border:1px solid rgba(0,0,0,.18);
       box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
       margin-top:-3px;
     }
-    input[type="range"].scrub::-moz-range-thumb{
-      width:16px;
-      height:12px;
-      border-radius:4px;
+
+    input.scrub::-moz-range-track{
+      height:8px;
+      border-radius:999px;
+      background: rgba(0,0,0,.12);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+    }
+    input.scrub::-moz-range-thumb{
+      width:18px;
+      height:14px;
+      border-radius:5px;
       background: rgba(255,255,255,.92);
       border:1px solid rgba(0,0,0,.18);
       box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
     }
 
-    input[type="range"].scrub:disabled{
-      opacity:.25;
-      cursor:default;
+    /* volume slider (vertical) */
+    input.vol{
+      width:20px;
+      height:78px;
+      cursor:pointer;
+      writing-mode: bt-lr;
+      -webkit-appearance: slider-vertical;
+    }
+    input.vol::-webkit-slider-runnable-track{
+      width:8px;
+      border-radius:999px;
+      background: rgba(0,0,0,.12);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+    }
+    input.vol::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:14px;
+      height:18px;
+      border-radius:5px;
+      background: rgba(255,255,255,.92);
+      border:1px solid rgba(0,0,0,.18);
+      box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
+      margin-left:-3px;
+    }
+
+    input.vol::-moz-range-track{
+      width:8px;
+      border-radius:999px;
+      background: rgba(0,0,0,.12);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+    }
+    input.vol::-moz-range-thumb{
+      width:14px;
+      height:18px;
+      border-radius:5px;
+      background: rgba(255,255,255,.92);
+      border:1px solid rgba(0,0,0,.18);
+      box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
+    }
+
+    input:disabled{ opacity:.25; cursor:default; }
+
+    /* touch-friendly tweaks ONLY on coarse pointers (phones) */
+    @media (pointer: coarse){
+      input.scrub{ height:28px; }
+      input.scrub::-webkit-slider-thumb{ width:22px; height:18px; margin-top:-5px; }
+      input.scrub::-moz-range-thumb{ width:22px; height:18px; }
     }
 
     .audioHidden{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
@@ -354,7 +425,7 @@
           <div class="discGrooves"></div>
           <div class="discSheen"></div>
 
-          <!-- psychedelic overlays (only visible when fxOn) -->
+          <!-- psychedelic overlays (fx only) -->
           <div class="psy"></div>
           <div class="psy2"></div>
 
@@ -398,9 +469,16 @@
         </button>
       </div>
 
-      <!-- scrubber: always visible; pauses while dragging to avoid zipper noise -->
-      <div class="scrubWrap" aria-label="position">
-        <input id="scrub" class="scrub" type="range" min="0" max="1000" value="0" step="1" disabled />
+      <div class="scrubWrap" aria-label="controls">
+        <div class="slotGroup">
+          <input id="scrub" class="scrub" type="range" min="0" max="1000" value="0" step="1" disabled />
+          <div class="slotLabel">pos</div>
+        </div>
+
+        <div class="slotGroup">
+          <input id="vol" class="vol" type="range" min="0" max="100" value="85" step="1" />
+          <div class="slotLabel">vol</div>
+        </div>
       </div>
     </div>
 
@@ -428,13 +506,14 @@
     const nextBtn = document.getElementById("nextBtn");
     const fxBtn = document.getElementById("fxBtn");
     const scrub = document.getElementById("scrub");
+    const vol = document.getElementById("vol");
 
     const titleEl = document.getElementById("trackTitle");
     const artistEl = document.getElementById("trackArtist");
     const artistLine = document.getElementById("artistLine");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !fxBtn || !scrub || !titleEl || !artistEl || !artistLine || !timeEl) return;
+    if (!audio || !stage || !btn || !prevBtn || !nextBtn || !fxBtn || !scrub || !vol || !titleEl || !artistEl || !artistLine || !timeEl) return;
 
     let tracks = [];
     let currentIdx = -1;
@@ -489,13 +568,11 @@
       master.connect(limiter);
       limiter.connect(ctx.destination);
 
-      // dry always routed
       dryGain = ctx.createGain();
       dryGain.gain.value = 1.0;
       src.connect(dryGain);
       dryGain.connect(master);
 
-      // wet chain
       wetGain = ctx.createGain();
       wetGain.gain.value = 0.0;
       wetGain.connect(master);
@@ -545,7 +622,6 @@
       conv = ctx.createConvolver();
       conv.buffer = makeImpulse(ctx, 3.2, 4.2);
 
-      // src -> filters -> predelay -> split -> delays -> merge -> (direct + verb) -> wetGain
       src.connect(hp);
       hp.connect(lp);
       lp.connect(preDelay);
@@ -561,7 +637,19 @@
       delayToVerb.connect(conv);
       conv.connect(wetGain);
 
+      // set volume from slider
+      const v = Math.max(0, Math.min(100, Number(vol.value))) / 100;
+      const gain = Math.pow(v, 1.6);
+      master.gain.value = 0.15 + gain * 0.95;
+
       if (ctx.state === "suspended") await ctx.resume();
+    };
+
+    const applyVolume = async () => {
+      if (!ctx) return;
+      const v = Math.max(0, Math.min(100, Number(vol.value))) / 100;
+      const gain = Math.pow(v, 1.6);
+      master.gain.setTargetAtTime(0.15 + gain * 0.95, ctx.currentTime, 0.08);
     };
 
     const setFX = async (on) => {
@@ -578,7 +666,6 @@
         return;
       }
 
-      // FX ON
       wetGain.gain.setTargetAtTime(1.15, ctx.currentTime, 0.28);
       dryGain.gain.setTargetAtTime(0.70, ctx.currentTime, 0.28);
       lp.frequency.setTargetAtTime(1150, ctx.currentTime, 0.70);
@@ -647,10 +734,11 @@
       setTrack(nextIdx, autoplay);
     };
 
-    // power: play/pause, and power-off resets FX off
+    // power: play/pause + reset FX off when powering off
     btn.addEventListener("click", async () => {
       if (!ready) return;
       if (!ctx) await ensureGraph();
+      await applyVolume();
 
       try{
         if (audio.paused || audio.ended) {
@@ -665,7 +753,7 @@
       setUI();
     });
 
-    // Next/Prev: now also reset FX off before changing track
+    // next/prev also reset FX
     nextBtn.addEventListener("click", async () => {
       if (!ready) return;
       await setFX(false);
@@ -700,7 +788,6 @@
       setUI();
     });
 
-    // Track end: reset FX off and go to next
     audio.addEventListener("ended", async () => {
       await setFX(false);
       playRandomNext(true);
@@ -716,15 +803,8 @@
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
 
-    // Scrubber: pause while dragging; seek on release (no zipper noise)
+    // Scrubber: pause while dragging; seek on release (no zipper)
     const durSafe = () => (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
-
-    const computePending = () => {
-      const dur = durSafe();
-      if (!(dur > 0)) return 0;
-      const frac = Number(scrub.value) / 1000;
-      return dur * frac;
-    };
 
     scrub.addEventListener("pointerdown", () => {
       scrubbing = true;
@@ -747,9 +827,15 @@
     scrub.addEventListener("input", () => {
       const dur = durSafe();
       if (!(dur > 0)) return;
-      pendingTime = computePending();
-      // show preview while dragging
+      const frac = Number(scrub.value) / 1000;
+      pendingTime = dur * frac;
       if (scrubbing) timeEl.textContent = `${fmt(pendingTime)} / ${fmt(dur)}`;
+    });
+
+    // volume slider -> master gain
+    vol.addEventListener("input", async () => {
+      if (!ctx) await ensureGraph();
+      await applyVolume();
     });
 
     fetch("playlist.json", { cache: "no-store" })
