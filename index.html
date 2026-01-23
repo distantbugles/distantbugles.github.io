@@ -52,13 +52,23 @@
       overflow:visible;
     }
 
-    .disc{ width:88%; aspect-ratio:1/1; border-radius:50%; position:relative; overflow:hidden; box-shadow:0 18px 55px rgba(0,0,0,.22); }
-    .discBase{ position:absolute; inset:0; border-radius:50%;
+    .disc{
+      width:88%;
+      aspect-ratio:1/1;
+      border-radius:50%;
+      position:relative;
+      overflow:hidden;
+      box-shadow:0 18px 55px rgba(0,0,0,.22);
+    }
+
+    .discBase{
+      position:absolute; inset:0; border-radius:50%;
       background:
         radial-gradient(circle at 50% 45%, rgba(255,255,255,.05), rgba(0,0,0,0) 55%),
         radial-gradient(circle at center, #2a2a2c 0%, #111114 62%, #0b0b0c 100%);
     }
-    .discGrooves{ position:absolute; inset:0; border-radius:50%; opacity:.24;
+    .discGrooves{
+      position:absolute; inset:0; border-radius:50%; opacity:.24;
       background: repeating-radial-gradient(circle at center,
         rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px,
         rgba(0,0,0,0) 3px, rgba(0,0,0,0) 6px
@@ -67,7 +77,11 @@
       -webkit-mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
       mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
     }
-    .discSheen{ position:absolute; inset:-35%; border-radius:50%; opacity:.32; transition:opacity 220ms ease;
+
+    .discSheen{
+      position:absolute; inset:-35%;
+      border-radius:50%;
+      opacity:.32;
       background: conic-gradient(
         from 0deg,
         rgba(255,255,255,0.00) 0deg, rgba(255,255,255,0.14) 22deg,
@@ -77,8 +91,58 @@
       );
       mix-blend-mode: screen;
       pointer-events:none;
+      transition: opacity 220ms ease;
     }
-    .stage.fxOn .discSheen{ opacity:.46; }
+    .stage.fxOn .discSheen{ opacity:.50; }
+
+    /* psychedelic overlay (hidden unless FX ON) */
+    .psy{
+      position:absolute;
+      inset:-40%;
+      border-radius:50%;
+      opacity:0;
+      pointer-events:none;
+      mix-blend-mode: screen;
+      filter: saturate(1.35) contrast(1.05);
+      transition: opacity 200ms ease;
+      background:
+        conic-gradient(from 0deg,
+          rgba(255, 40, 120,.00),
+          rgba(255, 40, 120,.45),
+          rgba(60, 255, 200,.00),
+          rgba(60, 255, 200,.45),
+          rgba(255, 220, 40,.00),
+          rgba(255, 220, 40,.45),
+          rgba(120, 80, 255,.00),
+          rgba(120, 80, 255,.45),
+          rgba(255, 40, 120,.00)
+        );
+      animation: psySpin 2.4s linear infinite;
+    }
+    .psy2{
+      position:absolute;
+      inset:-20%;
+      border-radius:50%;
+      opacity:0;
+      pointer-events:none;
+      mix-blend-mode: overlay;
+      transition: opacity 200ms ease;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,120,0,.55), rgba(0,0,0,0) 40%),
+        radial-gradient(circle at 70% 35%, rgba(0,255,190,.45), rgba(0,0,0,0) 38%),
+        radial-gradient(circle at 55% 70%, rgba(255,0,110,.45), rgba(0,0,0,0) 42%),
+        radial-gradient(circle at 35% 75%, rgba(255,240,0,.35), rgba(0,0,0,0) 45%);
+      animation: psyBreath 1.9s ease-in-out infinite;
+    }
+
+    .stage.fxOn .psy{ opacity:.85; }
+    .stage.fxOn .psy2{ opacity:.65; }
+
+    @keyframes psySpin { to { transform: rotate(360deg); } }
+    @keyframes psyBreath {
+      0%,100% { transform: scale(1) rotate(0deg); filter: blur(0px); }
+      50% { transform: scale(1.05) rotate(12deg); filter: blur(0.6px); }
+    }
 
     .label{
       position:absolute; inset:0; margin:auto; width:22%; aspect-ratio:1/1; border-radius:50%;
@@ -96,11 +160,24 @@
         radial-gradient(circle at center, var(--red) 0%, var(--red2) 70%, rgba(0,0,0,.30) 100%);
       border-color: rgba(255,255,255,.16);
     }
-    .hole{ width:28%; aspect-ratio:1/1; border-radius:50%; background:rgba(0,0,0,.88); box-shadow: inset 0 0 0 1px rgba(255,255,255,.10); }
+
+    .hole{
+      width:28%;
+      aspect-ratio:1/1;
+      border-radius:50%;
+      background:rgba(0,0,0,.88);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
+    }
 
     @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
     .stage.spinning .disc{ animation: spin 2.2s linear infinite; }
-    @media (prefers-reduced-motion: reduce){ .stage.spinning .disc{ animation:none; } }
+    /* spin backwards in FX mode */
+    .stage.fxOn.spinning .disc{ animation-direction: reverse; }
+
+    @media (prefers-reduced-motion: reduce){
+      .stage.spinning .disc{ animation:none; }
+      .psy,.psy2{ animation:none; }
+    }
 
     .np{ margin-top:8px; display:flex; justify-content:space-between; align-items:flex-end; gap:14px; }
     .npText{ opacity:0; transform:translateY(4px); transition:opacity 260ms ease, transform 260ms ease; }
@@ -202,7 +279,7 @@
       text-transform:lowercase;
     }
 
-    /* NEW: metal-slot scrubber (always visible) */
+    /* metal-slot scrubber */
     .scrubWrap{
       display:flex;
       justify-content:center;
@@ -223,7 +300,6 @@
       cursor:pointer;
     }
 
-    /* track */
     input[type="range"].scrub::-webkit-slider-runnable-track{
       height:6px;
       border-radius:999px;
@@ -237,7 +313,6 @@
       box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
     }
 
-    /* thumb (little “metal” slider) */
     input[type="range"].scrub::-webkit-slider-thumb{
       -webkit-appearance:none;
       appearance:none;
@@ -278,6 +353,11 @@
           <div class="discBase"></div>
           <div class="discGrooves"></div>
           <div class="discSheen"></div>
+
+          <!-- psychedelic overlays (only visible when fxOn) -->
+          <div class="psy"></div>
+          <div class="psy2"></div>
+
           <div class="label"><div class="hole"></div></div>
         </div>
       </div>
@@ -318,7 +398,7 @@
         </button>
       </div>
 
-      <!-- Scrubber: always visible -->
+      <!-- scrubber: always visible; pauses while dragging to avoid zipper noise -->
       <div class="scrubWrap" aria-label="position">
         <input id="scrub" class="scrub" type="range" min="0" max="1000" value="0" step="1" disabled />
       </div>
@@ -369,10 +449,12 @@
 
     let hp = null, lp = null;
     let split = null, merge = null, dL = null, dR = null, fbL = null, fbR = null;
-    let fbFilterL = null, fbFilterR = null, delayDirect = null, delayToVerb = null;
-    let conv = null, preDelay = null;
+    let fbFilterL = null, fbFilterR = null;
+    let delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
 
     let scrubbing = false;
+    let wasPlaying = false;
+    let pendingTime = 0;
 
     const makeImpulse = (ctx, seconds=3.2, decay=4.2) => {
       const rate = ctx.sampleRate;
@@ -514,7 +596,6 @@
       const dur = (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
       timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
 
-      // enable scrubber when duration is known
       scrub.disabled = !(dur > 0);
 
       if (!scrubbing && dur > 0) {
@@ -566,11 +647,9 @@
       setTrack(nextIdx, autoplay);
     };
 
-    // power button: play/pause
+    // power: play/pause, and power-off resets FX off
     btn.addEventListener("click", async () => {
       if (!ready) return;
-
-      // ensure graph once (Safari reliability), even if FX never used
       if (!ctx) await ensureGraph();
 
       try{
@@ -582,20 +661,21 @@
         }
       } catch(e) {}
 
-      // power off resets fx off
       if (audio.paused || audio.ended) await setFX(false);
-
       setUI();
     });
 
-    nextBtn.addEventListener("click", () => {
+    // Next/Prev: now also reset FX off before changing track
+    nextBtn.addEventListener("click", async () => {
       if (!ready) return;
+      await setFX(false);
       playRandomNext(true);
       setUI();
     });
 
-    prevBtn.addEventListener("click", () => {
+    prevBtn.addEventListener("click", async () => {
       if (!ready) return;
+      await setFX(false);
 
       if (audio.currentTime > 2) {
         audio.currentTime = 0;
@@ -620,8 +700,9 @@
       setUI();
     });
 
+    // Track end: reset FX off and go to next
     audio.addEventListener("ended", async () => {
-      await setFX(false); // intentional reset between tracks
+      await setFX(false);
       playRandomNext(true);
       setUI();
     });
@@ -635,19 +716,41 @@
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
 
-    // Scrubber interactions
-    const seekToScrub = () => {
-      const dur = (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
-      if (!(dur > 0)) return;
+    // Scrubber: pause while dragging; seek on release (no zipper noise)
+    const durSafe = () => (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
+
+    const computePending = () => {
+      const dur = durSafe();
+      if (!(dur > 0)) return 0;
       const frac = Number(scrub.value) / 1000;
-      audio.currentTime = dur * frac;
-      updateTime();
+      return dur * frac;
     };
 
-    scrub.addEventListener("pointerdown", () => { scrubbing = true; });
-    window.addEventListener("pointerup", () => { scrubbing = false; });
+    scrub.addEventListener("pointerdown", () => {
+      scrubbing = true;
+      wasPlaying = !audio.paused && !audio.ended;
+      if (wasPlaying) audio.pause();
+    });
 
-    scrub.addEventListener("input", () => { seekToScrub(); });
+    window.addEventListener("pointerup", () => {
+      if (!scrubbing) return;
+      scrubbing = false;
+      const dur = durSafe();
+      if (dur > 0) {
+        audio.currentTime = pendingTime;
+        if (wasPlaying) audio.play().catch(() => {});
+      }
+      wasPlaying = false;
+      updateTime();
+    });
+
+    scrub.addEventListener("input", () => {
+      const dur = durSafe();
+      if (!(dur > 0)) return;
+      pendingTime = computePending();
+      // show preview while dragging
+      if (scrubbing) timeEl.textContent = `${fmt(pendingTime)} / ${fmt(dur)}`;
+    });
 
     fetch("playlist.json", { cache: "no-store" })
       .then(r => r.json())
