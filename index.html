@@ -113,7 +113,6 @@
       -webkit-mask-size:100% 100%;
       mask-size:100% 100%;
     }
-
     .psy{
       mix-blend-mode: screen;
       filter: saturate(1.4) contrast(1.1);
@@ -130,7 +129,6 @@
       );
       animation: psySpin 2.4s linear infinite;
     }
-
     .psy2{
       mix-blend-mode: overlay;
       background:
@@ -140,7 +138,6 @@
         radial-gradient(circle at 35% 75%, rgba(255,240,0,.35), rgba(0,0,0,0) 48%);
       animation: psyBreath 1.9s ease-in-out infinite;
     }
-
     .stage.fxOn .psy{ opacity:.85; }
     .stage.fxOn .psy2{ opacity:.65; }
 
@@ -161,7 +158,6 @@
       transition: background 220ms ease, border-color 220ms ease;
       z-index:5;
     }
-
     .stage.spinning .label{
       background:
         radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
@@ -197,8 +193,27 @@
     .npArtistLine .by{ opacity:.85; margin-right:6px; }
     .npTime{ margin-top:1px; font-size:13px; color:rgba(0,0,0,.45); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
 
-    .npNav{ margin-top:8px; display:flex; gap:10px; opacity:0; transform:translateY(4px); transition:opacity 260ms ease, transform 260ms ease; pointer-events:none; }
-    .stage.spinning ~ .np .npNav{ opacity:1; transform:translateY(0); pointer-events:auto; }
+    /* Bottom control row: aligns bottoms across buttons + labels + power */
+    .bottomRow{
+      margin-top:8px;
+      display:flex;
+      align-items:flex-end;
+      gap:14px;
+    }
+
+    .npNav{
+      display:flex;
+      gap:10px;
+      pointer-events:none;
+      opacity:0;
+      transform:translateY(4px);
+      transition:opacity 260ms ease, transform 260ms ease;
+    }
+    .stage.spinning ~ .np .npNav{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
 
     .navBtn{
       appearance:none;
@@ -286,25 +301,19 @@
       text-transform:lowercase;
     }
 
-    /* sliders (pos + vol) */
-    .scrubWrap{
+    /* sliders: now live INSIDE bottom row, between nav buttons and power */
+    .slotCluster{
       display:flex;
-      justify-content:center;
       align-items:flex-end;
-      gap:24px;
-      margin-top:14px;
-      margin-bottom:2px;
-      opacity:.55;
-      transition: opacity 160ms ease;
+      gap:18px;
+      margin-left:4px;
     }
-    .scrubWrap:focus-within,
-    .scrubWrap:hover{ opacity:.85; }
 
     .slotGroup{
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:7px;
+      gap:6px;
       position:relative;
     }
 
@@ -314,15 +323,18 @@
       letter-spacing:.16em;
       text-transform:lowercase;
       user-select:none;
+      line-height:1;
+      width:100%;
+      text-align:center;
     }
 
     .slotTicks{
       position:absolute;
-      opacity:.35;
+      opacity:.28;
       pointer-events:none;
     }
     .slotTicksH{
-      width:210px;
+      width:150px;
       height:8px;
       top:2px;
       background: repeating-linear-gradient(
@@ -333,7 +345,7 @@
     }
     .slotTicksV{
       width:8px;
-      height:92px;
+      height:74px;
       top:2px;
       background: repeating-linear-gradient(
         to bottom,
@@ -349,8 +361,8 @@
     }
 
     input.scrub{
-      width:210px;
-      height:22px;
+      width:150px;
+      height:18px;
       cursor:pointer;
     }
     input.scrub::-webkit-slider-runnable-track{
@@ -385,15 +397,14 @@
       box-shadow: 0 6px 14px rgba(0,0,0,.10), inset 0 0 0 1px rgba(255,255,255,.6);
     }
 
-    /* volume slider: true vertical (rotate a normal range), works in Firefox */
     .volShell{
       width:22px;
-      height:92px;
+      height:74px;
       display:grid;
       place-items:center;
     }
     input.vol{
-      width:92px;
+      width:74px;
       height:22px;
       cursor:pointer;
       transform: rotate(-90deg);
@@ -434,11 +445,9 @@
     input:disabled{ opacity:.25; cursor:default; }
 
     @media (pointer: coarse){
-      input.scrub{ height:28px; }
+      input.scrub{ height:24px; }
       input.scrub::-webkit-slider-thumb{ width:22px; height:18px; margin-top:-5px; }
       input.scrub::-moz-range-thumb{ width:22px; height:18px; }
-
-      /* slightly taller vol thumb on touch */
       input.vol::-webkit-slider-thumb{ height:20px; }
       input.vol::-moz-range-thumb{ height:20px; }
     }
@@ -475,47 +484,49 @@
           </div>
           <div class="npTime" id="trackTime">0:00 / 0:00</div>
 
-          <div class="npNav">
-            <button class="navBtn" id="prevBtn" type="button" aria-label="previous">
-              <span class="navTri left" aria-hidden="true"></span>
-            </button>
+          <div class="bottomRow">
+            <div class="npNav">
+              <button class="navBtn" id="prevBtn" type="button" aria-label="previous">
+                <span class="navTri left" aria-hidden="true"></span>
+              </button>
 
-            <button class="navBtn" id="fxBtn" type="button" aria-label="ambient">
-              <svg class="fxIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M3 8c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
-                <path d="M3 12c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
-                <path d="M3 16c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
-              </svg>
-            </button>
+              <button class="navBtn" id="fxBtn" type="button" aria-label="ambient">
+                <svg class="fxIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 8c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
+                  <path d="M3 12c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
+                  <path d="M3 16c3 0 3-2 6-2s3 2 6 2 3-2 6-2"></path>
+                </svg>
+              </button>
 
-            <button class="navBtn" id="nextBtn" type="button" aria-label="next">
-              <span class="navTri right" aria-hidden="true"></span>
-            </button>
+              <button class="navBtn" id="nextBtn" type="button" aria-label="next">
+                <span class="navTri right" aria-hidden="true"></span>
+              </button>
+            </div>
+
+            <div class="slotCluster" aria-label="sliders">
+              <div class="slotGroup posGroup">
+                <div class="slotTicks slotTicksH" aria-hidden="true"></div>
+                <input id="scrub" class="scrub" type="range" min="0" max="1000" value="0" step="1" disabled />
+                <div class="slotLabel">pos</div>
+              </div>
+
+              <div class="slotGroup volGroup">
+                <div class="slotTicks slotTicksV" aria-hidden="true"></div>
+                <div class="volShell">
+                  <input id="vol" class="vol" type="range" min="0" max="100" value="85" step="1" />
+                </div>
+                <div class="slotLabel">vol</div>
+              </div>
+            </div>
           </div>
         </div>
 
         <button id="toggle" class="powerBtn" type="button" aria-label="play or pause">
           <svg class="powerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 2v9"></path>
-                <path d="M7.5 4.8a8 8 0 1 0 9 0"></path>
+            <path d="M12 2v9"></path>
+            <path d="M7.5 4.8a8 8 0 1 0 9 0"></path>
           </svg>
         </button>
-      </div>
-
-      <div class="scrubWrap" aria-label="controls">
-        <div class="slotGroup posGroup">
-          <div class="slotTicks slotTicksH" aria-hidden="true"></div>
-          <input id="scrub" class="scrub" type="range" min="0" max="1000" value="0" step="1" disabled />
-          <div class="slotLabel">pos</div>
-        </div>
-
-        <div class="slotGroup volGroup">
-          <div class="slotTicks slotTicksV" aria-hidden="true"></div>
-          <div class="volShell">
-            <input id="vol" class="vol" type="range" min="0" max="100" value="85" step="1" />
-          </div>
-          <div class="slotLabel">vol</div>
-        </div>
       </div>
     </div>
 
@@ -562,6 +573,7 @@
     // WebAudio graph (dry + wet)
     let ctx = null, src = null;
     let dryGain = null, wetGain = null, master = null, limiter = null;
+
     let hp = null, lp = null;
     let split = null, merge = null, dL = null, dR = null, fbL = null, fbR = null;
     let fbFilterL = null, fbFilterR = null, delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
