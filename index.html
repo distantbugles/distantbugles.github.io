@@ -295,9 +295,9 @@
 
     let fxOn = false;
 
-    // WebAudio: WET SEND ONLY (dry is native audio)
+    // WebAudio graph (Safari requires routing after MediaElementSource is created)
     let ctx = null, src = null;
-    let wetGain = null, master = null, limiter = null;
+    let dryGain = null, wetGain = null, master = null, limiter = null;
     let hp = null, lp = null;
     let split = null, merge = null, dL = null, dR = null, fbL = null, fbR = null;
     let fbFilterL = null, fbFilterR = null;
@@ -317,14 +317,14 @@
       return buf;
     };
 
-    const ensureWetSend = async () => {
+    const ensureGraph = async () => {
       if (ctx) return;
 
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       src = ctx.createMediaElementSource(audio);
 
       master = ctx.createGain();
-      master.gain.value = 0.85;
+      master.gain.value = 0.90;
 
       limiter = ctx.createDynamicsCompressor();
       limiter.threshold.value = -10;
@@ -336,6 +336,13 @@
       master.connect(limiter);
       limiter.connect(ctx.destination);
 
+      // dry always routed (prevents silence when fx is off)
+      dryGain = ctx.createGain();
+      dryGain.gain.value = 1.0;
+      src.connect(dryGain);
+      dryGain.connect(master);
+
+      // wet chain
       wetGain = ctx.createGain();
       wetGain.gain.value = 0.0;
       wetGain.connect(master);
@@ -385,7 +392,7 @@
       conv = ctx.createConvolver();
       conv.buffer = makeImpulse(ctx, 3.2, 4.2);
 
-      // send chain: src -> hp -> lp -> preDelay -> delays -> (direct + reverb) -> wetGain
+      // src -> filters -> predelay -> split -> delays -> merge -> (direct + verb) -> wetGain
       src.connect(hp);
       hp.connect(lp);
       lp.connect(preDelay);
@@ -408,20 +415,21 @@
       fxOn = on;
       stage.classList.toggle("fxOn", fxOn);
 
-      if (!ctx) await ensureWetSend();
+      if (!ctx) await ensureGraph();
       if (ctx.state === "suspended") await ctx.resume();
 
       if (!fxOn) {
+        // NORMAL
         wetGain.gain.setTargetAtTime(0.0, ctx.currentTime, 0.18);
+        dryGain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.18);
         lp.frequency.setTargetAtTime(9000, ctx.currentTime, 0.45);
         return;
       }
 
-      // FX ON: crank wet send
+      // FX ON (your current “good” sound)
       wetGain.gain.setTargetAtTime(1.15, ctx.currentTime, 0.28);
+      dryGain.gain.setTargetAtTime(0.70, ctx.currentTime, 0.28);
       lp.frequency.setTargetAtTime(1150, ctx.currentTime, 0.70);
-      fbFilterL.frequency.setTargetAtTime(1350, ctx.currentTime, 0.9);
-      fbFilterR.frequency.setTargetAtTime(1350, ctx.currentTime, 0.9);
     };
 
     const fmt = (s) => {
@@ -484,6 +492,9 @@
     btn.addEventListener("click", async () => {
       if (!ready) return;
 
+      // ensure graph once (Safari safety)
+      if (!ctx) await ensureGraph();
+
       try{
         if (audio.paused || audio.ended) {
           if (!audio.src) setTrack(pickRandomIndex(-1), false);
@@ -493,7 +504,7 @@
         }
       } catch(e) {}
 
-      // power off resets FX off
+      // power off resets fx
       if (audio.paused || audio.ended) await setFX(false);
 
       setUI();
@@ -541,7 +552,6 @@
       if (ctx && ctx.state === "suspended") ctx.resume();
       setUI();
     });
-
     audio.addEventListener("pause", setUI);
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
@@ -551,10 +561,8 @@
       .then(list => {
         tracks = Array.isArray(list) ? list : [];
         ready = tracks.length > 0;
-
         if (ready) setTrack(pickRandomIndex(-1), false);
         else titleEl.textContent = "no tracks";
-
         setUI();
       })
       .catch(() => {
