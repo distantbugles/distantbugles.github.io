@@ -202,7 +202,6 @@
       text-transform:lowercase;
     }
 
-    /* keep audio element available, but off-screen */
     audio{ display:block; position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
   </style>
 </head>
@@ -294,10 +293,8 @@
     let history = [];
     let ready = false;
 
-    // FX state
     let fxOn = false;
 
-    // WebAudio graph (created once)
     let ctx = null, src = null;
     let dry = null, wet = null, master = null, limiter = null;
     let dryLP = null, hp = null, lp = null;
@@ -325,7 +322,7 @@
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       src = ctx.createMediaElementSource(audio);
 
-      // master & limiter to stop clipping
+      // master & limiter
       master = ctx.createGain();
       master.gain.value = 0.88;
 
@@ -341,6 +338,8 @@
 
       dry = ctx.createGain();
       wet = ctx.createGain();
+
+      // default = normal playback
       dry.gain.value = 1.0;
       wet.gain.value = 0.0;
 
@@ -393,16 +392,12 @@
       conv = ctx.createConvolver();
       conv.buffer = makeImpulse(ctx, 3.6, 4.8);
 
-      // IMPORTANT: once graph exists, keep native audio volume at 0 forever
-      // so we never "double" output.
-      audio.volume = 0;
-
-      // dry path
+      // DRY
       src.connect(dryLP);
       dryLP.connect(dry);
       dry.connect(master);
 
-      // wet input
+      // WET input
       src.connect(hp);
       hp.connect(lp);
       lp.connect(preDelay);
@@ -427,9 +422,7 @@
       fxOn = on;
       stage.classList.toggle("fxOn", fxOn);
 
-      // create graph lazily (first FX toggle or first play)
       if (!ctx) await ensureGraph();
-
       if (ctx.state === "suspended") await ctx.resume();
 
       if (!fxOn) {
@@ -498,7 +491,7 @@
       audio.load();
       updateTime();
 
-      // keep FX state if it was on
+      // keep FX if already on
       if (fxOn) setFX(true);
 
       if (autoplay) audio.play().catch(() => {});
@@ -514,7 +507,6 @@
     btn.addEventListener("click", async () => {
       if (!ready) return;
 
-      // ensure graph exists on first play so we never fight native audio later
       if (!ctx) await ensureGraph();
       if (ctx.state === "suspended") await ctx.resume();
 
@@ -527,7 +519,7 @@
         }
       } catch(e) {}
 
-      // power off resets FX off
+      // power off resets fx off
       if (audio.paused || audio.ended) await setFX(false);
 
       setUI();
@@ -575,15 +567,10 @@
       if (ctx && ctx.state === "suspended") ctx.resume();
       setUI();
     });
+
     audio.addEventListener("pause", setUI);
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
-
-    // helpful: show decode/404 problems
-    audio.addEventListener("error", () => {
-      // keep UI alive; you can see which file is failing in DevTools if needed
-      timeEl.textContent = "0:00 / 0:00";
-    });
 
     fetch("playlist.json", { cache: "no-store" })
       .then(r => r.json())
