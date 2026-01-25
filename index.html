@@ -40,9 +40,10 @@
       box-shadow: 0 16px 40px rgba(0,0,0,.06), inset 0 0 0 1px rgba(0,0,0,.06);
     }
 
+    /* bring the "plinth" content up slightly (less dead space) */
     .stage{
       width:100%;
-      aspect-ratio:11/10;
+      aspect-ratio:11/9.35; /* was 11/10 */
       position:relative;
       display:grid;
       place-items:center;
@@ -57,6 +58,7 @@
       overflow:hidden;
       box-shadow:0 18px 55px rgba(0,0,0,.22);
       user-select:none;
+      transform: translateZ(0);
     }
 
     .discBase{
@@ -91,18 +93,23 @@
       );
       mix-blend-mode: screen;
       pointer-events:none;
+      transform: translateZ(0);
     }
     .stage.fxOn .discSheen{ opacity:.50; }
 
-    /* FX visuals — strictly circular (WebKit-safe) */
+    /* FX visuals — force circular on iOS */
     .psy, .psy2{
       position:absolute;
-      inset:-40%;
+      inset:0;               /* no negative inset; we scale instead */
       border-radius:50%;
       opacity:0;
       pointer-events:none;
       transition: opacity 200ms ease;
       transform-origin: 50% 50%;
+      will-change: transform;
+      backface-visibility:hidden;
+
+      /* belt + suspenders: mask + clip-path */
       -webkit-mask-image: radial-gradient(circle at center, #000 0 62%, transparent 64%);
       mask-image: radial-gradient(circle at center, #000 0 62%, transparent 64%);
       -webkit-mask-repeat:no-repeat;
@@ -111,7 +118,10 @@
       mask-position:center;
       -webkit-mask-size:100% 100%;
       mask-size:100% 100%;
+      -webkit-clip-path: circle(50% at 50% 50%);
+      clip-path: circle(50% at 50% 50%);
     }
+
     .psy{
       mix-blend-mode: screen;
       filter: saturate(1.4) contrast(1.1);
@@ -127,6 +137,7 @@
         rgba(255, 40, 120,.00)
       );
       animation: psySpin 2.4s linear infinite;
+      transform: scale(1.75);
     }
     .psy2{
       mix-blend-mode: overlay;
@@ -136,14 +147,16 @@
         radial-gradient(circle at 55% 70%, rgba(255,0,110,.45), rgba(0,0,0,0) 44%),
         radial-gradient(circle at 35% 75%, rgba(255,240,0,.35), rgba(0,0,0,0) 48%);
       animation: psyBreath 1.9s ease-in-out infinite;
+      transform: scale(1.35);
     }
+
     .stage.fxOn .psy{ opacity:.85; }
     .stage.fxOn .psy2{ opacity:.65; }
 
-    @keyframes psySpin { to { transform: rotate(360deg); } }
+    @keyframes psySpin { to { transform: scale(1.75) rotate(360deg); } }
     @keyframes psyBreath {
-      0%,100% { transform: scale(1) rotate(0deg); filter: blur(0px); }
-      50% { transform: scale(1.05) rotate(12deg); filter: blur(0.6px); }
+      0%,100% { transform: scale(1.35) rotate(0deg); filter: blur(0px); }
+      50% { transform: scale(1.42) rotate(12deg); filter: blur(0.6px); }
     }
 
     /* label is the FX toggle target */
@@ -167,9 +180,10 @@
       box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.08);
       display:flex; justify-content:center; align-items:center;
       transition: background 220ms ease, border-color 220ms ease, box-shadow 180ms ease, transform 220ms ease;
+      transform: translateZ(0);
     }
 
-    /* label turns red when playing (your established look) */
+    /* label goes red when spinning (like before) */
     .stage.spinning .label{
       background:
         radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
@@ -177,25 +191,31 @@
       border-color: rgba(255,255,255,.16);
     }
 
-    /* NEW: “press me” pulse when powered on and FX is OFF */
-    .stage.on:not(.fxOn) .label{
-      animation: beckon 1.8s ease-in-out infinite;
-    }
-    @keyframes beckon{
+    /* more compelling FX invitation: pulse ring + slight breathing, but only when powered+not FX */
+    @keyframes beckonRing {
       0%,100%{
-        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 0 rgba(176,24,24,.00);
+        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18),
+                    0 0 0 0 rgba(176,24,24,.00),
+                    0 0 0 0 rgba(176,24,24,.00);
         transform: scale(1);
       }
       50%{
-        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 8px rgba(176,24,24,.10);
-        transform: scale(1.03);
+        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18),
+                    0 0 0 10px rgba(176,24,24,.08),
+                    0 0 18px 0 rgba(176,24,24,.10);
+        transform: scale(1.045);
       }
     }
+    .stage.powered:not(.fxOn) .labelBtn{
+      animation: beckonRing 1.35s ease-in-out infinite;
+    }
+    .stage.fxOn .labelBtn{ animation:none; }
 
-    /* stop pulsing when FX is on (because the record goes psychedelic) */
-    .stage.fxOn .label{ animation: none; }
+    /* once FX is on, give a quiet “armed” halo */
+    .stage.fxOn .label{
+      box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 2px rgba(176,24,24,.22);
+    }
 
-    /* a tiny tactile hint on press */
     .labelBtn:active .label{ transform: scale(0.98); }
 
     .hole{
@@ -214,18 +234,18 @@
     @media (prefers-reduced-motion: reduce){
       .stage.spinning .disc{ animation:none; }
       .psy,.psy2{ animation:none; }
-      .stage.on:not(.fxOn) .label{ animation:none; }
+      .stage.powered:not(.fxOn) .labelBtn{ animation:none; }
     }
 
-    .np{ margin-top:8px; display:flex; justify-content:space-between; align-items:flex-end; gap:14px; }
+    .np{ margin-top:6px; display:flex; justify-content:space-between; align-items:flex-end; gap:14px; }
 
-    /* NEW: show UI whenever powered ON, not only when spinning */
+    /* show UI whenever powered, even if paused */
     .npText{
       opacity:0;
       transform:translateY(4px);
       transition:opacity 200ms ease, transform 200ms ease;
     }
-    .stage.on ~ .np .npText{
+    .stage.powered ~ .np .npText{
       opacity:1;
       transform:translateY(0);
     }
@@ -237,6 +257,7 @@
     .npArtistLine .by{ opacity:.85; margin-right:6px; }
     .npTime{ margin-top:1px; font-size:13px; color:rgba(0,0,0,.45); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
 
+    /* controls */
     .controlRow{
       margin-top:10px;
       display:flex;
@@ -247,7 +268,7 @@
       transform:translateY(4px);
       transition:opacity 260ms ease, transform 260ms ease;
     }
-    .stage.on ~ .np .controlRow{
+    .stage.powered ~ .np .controlRow{
       opacity:1;
       transform:translateY(0);
       pointer-events:auto;
@@ -266,10 +287,34 @@
     }
     .navBtn:active{ transform:translateY(1px); }
 
-    .navTri{ width:0;height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; }
-    .navTri.left{ border-right:11px solid var(--red); margin-left:-2px; }
-    .navTri.right{ border-left:11px solid var(--red); margin-right:-2px; }
+    /* Track-skip icons: |< and >| (so play is NOT confused with next) */
+    .skipIcon{
+      width:20px; height:18px;
+      position:relative;
+    }
+    .skipIcon .bar{
+      position:absolute;
+      top:1px; bottom:1px;
+      width:3px;
+      background: var(--red);
+      border-radius:2px;
+      opacity:.85;
+    }
+    .skipIcon .tri{
+      position:absolute;
+      top:50%;
+      width:0;height:0;
+      border-top:7px solid transparent;
+      border-bottom:7px solid transparent;
+      transform: translateY(-50%);
+      opacity:.95;
+    }
+    .skipPrev .bar{ left:2px; }
+    .skipPrev .tri{ left:7px; border-right:11px solid var(--red); }
+    .skipNext .bar{ right:2px; }
+    .skipNext .tri{ right:7px; border-left:11px solid var(--red); }
 
+    /* Pause/Play button: pause bars, and play triangle when paused */
     .pauseIcon{
       width:18px;height:18px;
       position:relative;
@@ -287,7 +332,6 @@
     .pauseIcon::before{ left:3px; }
     .pauseIcon::after{ right:3px; }
 
-    /* when paused (but powered on), show play triangle */
     .pausedState .pauseIcon::before,
     .pausedState .pauseIcon::after{ display:none; }
     .pausedState .pauseIcon{
@@ -298,6 +342,7 @@
       margin-left:3px;
     }
 
+    /* power button stays as-is */
     .powerBtn{
       appearance:none;
       border:2px solid rgba(0,0,0,.28);
@@ -367,7 +412,9 @@
 
           <div class="controlRow">
             <button class="navBtn" id="prevBtn" type="button" aria-label="previous">
-              <span class="navTri left" aria-hidden="true"></span>
+              <span class="skipIcon skipPrev" aria-hidden="true">
+                <span class="bar"></span><span class="tri"></span>
+              </span>
             </button>
 
             <button class="navBtn" id="pauseBtn" type="button" aria-label="pause or resume">
@@ -375,7 +422,9 @@
             </button>
 
             <button class="navBtn" id="nextBtn" type="button" aria-label="next">
-              <span class="navTri right" aria-hidden="true"></span>
+              <span class="skipIcon skipNext" aria-hidden="true">
+                <span class="bar"></span><span class="tri"></span>
+              </span>
             </button>
           </div>
         </div>
@@ -413,7 +462,6 @@
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
     const pauseBtn = document.getElementById("pauseBtn");
-    const pauseIcon = document.getElementById("pauseIcon");
     const labelFx = document.getElementById("labelFx");
 
     const titleEl = document.getElementById("trackTitle");
@@ -421,7 +469,7 @@
     const artistLine = document.getElementById("artistLine");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !powerBtn || !prevBtn || !nextBtn || !pauseBtn || !pauseIcon || !labelFx || !titleEl || !artistEl || !artistLine || !timeEl) return;
+    if (!audio || !stage || !powerBtn || !prevBtn || !nextBtn || !pauseBtn || !labelFx || !titleEl || !artistEl || !artistLine || !timeEl) return;
 
     let tracks = [];
     let currentIdx = -1;
@@ -429,6 +477,7 @@
     let ready = false;
 
     let fxOn = false;
+    let powered = false;
 
     // WebAudio graph (dry + wet)
     let ctx = null, src = null;
@@ -436,8 +485,6 @@
     let hp = null, lp = null, split = null, merge = null, dL = null, dR = null;
     let fbL = null, fbR = null, fbFilterL = null, fbFilterR = null;
     let delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
-
-    let powered = false;
 
     const makeImpulse = (ctx, seconds=3.2, decay=4.2) => {
       const rate = ctx.sampleRate;
@@ -577,12 +624,11 @@
     };
 
     const setUI = () => {
-      stage.classList.toggle("on", powered);
+      stage.classList.toggle("powered", powered);
 
       const playing = powered && !audio.paused && !audio.ended;
       stage.classList.toggle("spinning", playing);
 
-      // pause button icon state
       pauseBtn.classList.toggle("pausedState", powered && (audio.paused || audio.ended));
 
       updateTime();
@@ -626,7 +672,6 @@
       setTrack(nextIdx, autoplay);
     };
 
-    // POWER: hard stop / blank state
     powerBtn.addEventListener("click", async () => {
       if (!ready) return;
       if (!ctx) await ensureGraph();
@@ -643,7 +688,6 @@
       setUI();
     });
 
-    // PAUSE: soft pause/resume without blanking UI
     pauseBtn.addEventListener("click", async () => {
       if (!ready || !powered) return;
       if (!ctx) await ensureGraph();
@@ -655,7 +699,6 @@
       setUI();
     });
 
-    // Next/Prev (also reset FX off)
     nextBtn.addEventListener("click", async () => {
       if (!ready || !powered) return;
       await setFX(false);
@@ -684,14 +727,12 @@
       setUI();
     });
 
-    // Label toggles FX (only when powered)
     labelFx.addEventListener("click", async () => {
       if (!ready || !powered) return;
       await setFX(!fxOn);
       setUI();
     });
 
-    // Auto-next: reset FX off when track ends
     audio.addEventListener("ended", async () => {
       if (!powered) return;
       await setFX(false);
@@ -713,7 +754,6 @@
         tracks = Array.isArray(list) ? list : [];
         ready = tracks.length > 0;
 
-        // preload a random track title, but do not auto-play
         if (ready) setTrack(pickRandomIndex(-1), false);
         else titleEl.textContent = "no tracks";
 
