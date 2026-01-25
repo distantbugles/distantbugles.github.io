@@ -11,6 +11,7 @@
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
       --panel:#f6f6f4;
+
       --red:#b01818;
       --red2:#7f0f0f;
     }
@@ -40,10 +41,10 @@
       box-shadow: 0 16px 40px rgba(0,0,0,.06), inset 0 0 0 1px rgba(0,0,0,.06);
     }
 
-    /* bring the "plinth" content up slightly (less dead space) */
+    /* plinth height tighter (you liked this) */
     .stage{
       width:100%;
-      aspect-ratio:11/9.35; /* was 11/10 */
+      aspect-ratio:11/9.35;
       position:relative;
       display:grid;
       place-items:center;
@@ -59,6 +60,8 @@
       box-shadow:0 18px 55px rgba(0,0,0,.22);
       user-select:none;
       transform: translateZ(0);
+      isolation:isolate;        /* helps mobile blending bugs */
+      contain: paint;           /* helps mobile clipping bugs */
     }
 
     .discBase{
@@ -97,66 +100,68 @@
     }
     .stage.fxOn .discSheen{ opacity:.50; }
 
-    /* FX visuals — force circular on iOS */
-    .psy, .psy2{
+    /* Dedicated circular FX clip wrapper (kills the “square around the circle” on iOS) */
+    .fxWrap{
       position:absolute;
-      inset:0;               /* no negative inset; we scale instead */
+      inset:0;
       border-radius:50%;
-      opacity:0;
+      overflow:hidden;
       pointer-events:none;
-      transition: opacity 200ms ease;
-      transform-origin: 50% 50%;
-      will-change: transform;
-      backface-visibility:hidden;
-
-      /* belt + suspenders: mask + clip-path */
-      -webkit-mask-image: radial-gradient(circle at center, #000 0 62%, transparent 64%);
-      mask-image: radial-gradient(circle at center, #000 0 62%, transparent 64%);
+      transform: translateZ(0);
+      contain: paint;
+      -webkit-mask-image: radial-gradient(circle at center, #000 99%, transparent 100%);
+      mask-image: radial-gradient(circle at center, #000 99%, transparent 100%);
       -webkit-mask-repeat:no-repeat;
       mask-repeat:no-repeat;
       -webkit-mask-position:center;
       mask-position:center;
       -webkit-mask-size:100% 100%;
       mask-size:100% 100%;
-      -webkit-clip-path: circle(50% at 50% 50%);
-      clip-path: circle(50% at 50% 50%);
     }
 
+    .psy, .psy2{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      transition: opacity 200ms ease;
+      transform-origin: 50% 50%;
+      will-change: transform;
+      backface-visibility:hidden;
+    }
+
+    /* No filters + no mix-blend on these = much less WebKit weirdness */
     .psy{
-      mix-blend-mode: screen;
-      filter: saturate(1.4) contrast(1.1);
       background: conic-gradient(from 0deg,
-        rgba(255, 40, 120,.00),
-        rgba(255, 40, 120,.45),
-        rgba(60, 255, 200,.00),
-        rgba(60, 255, 200,.45),
-        rgba(255, 220, 40,.00),
-        rgba(255, 220, 40,.45),
-        rgba(120, 80, 255,.00),
-        rgba(120, 80, 255,.45),
-        rgba(255, 40, 120,.00)
+        rgba(255, 40, 120, 0.00),
+        rgba(255, 40, 120, 0.50),
+        rgba(60, 255, 200, 0.00),
+        rgba(60, 255, 200, 0.45),
+        rgba(255, 220, 40, 0.00),
+        rgba(255, 220, 40, 0.45),
+        rgba(120, 80, 255, 0.00),
+        rgba(120, 80, 255, 0.45),
+        rgba(255, 40, 120, 0.00)
       );
       animation: psySpin 2.4s linear infinite;
-      transform: scale(1.75);
+      opacity:0;
     }
     .psy2{
-      mix-blend-mode: overlay;
       background:
-        radial-gradient(circle at 30% 30%, rgba(255,120,0,.55), rgba(0,0,0,0) 42%),
-        radial-gradient(circle at 70% 35%, rgba(0,255,190,.45), rgba(0,0,0,0) 40%),
-        radial-gradient(circle at 55% 70%, rgba(255,0,110,.45), rgba(0,0,0,0) 44%),
-        radial-gradient(circle at 35% 75%, rgba(255,240,0,.35), rgba(0,0,0,0) 48%);
+        radial-gradient(circle at 30% 30%, rgba(255,120,0,.42), rgba(0,0,0,0) 46%),
+        radial-gradient(circle at 70% 35%, rgba(0,255,190,.35), rgba(0,0,0,0) 44%),
+        radial-gradient(circle at 55% 70%, rgba(255,0,110,.35), rgba(0,0,0,0) 48%),
+        radial-gradient(circle at 35% 75%, rgba(255,240,0,.28), rgba(0,0,0,0) 52%);
       animation: psyBreath 1.9s ease-in-out infinite;
-      transform: scale(1.35);
+      opacity:0;
     }
 
-    .stage.fxOn .psy{ opacity:.85; }
-    .stage.fxOn .psy2{ opacity:.65; }
+    .stage.fxOn .psy{ opacity:.70; }
+    .stage.fxOn .psy2{ opacity:.55; }
 
-    @keyframes psySpin { to { transform: scale(1.75) rotate(360deg); } }
+    @keyframes psySpin { to { transform: rotate(360deg); } }
     @keyframes psyBreath {
-      0%,100% { transform: scale(1.35) rotate(0deg); filter: blur(0px); }
-      50% { transform: scale(1.42) rotate(12deg); filter: blur(0.6px); }
+      0%,100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.05) rotate(10deg); }
     }
 
     /* label is the FX toggle target */
@@ -191,27 +196,30 @@
       border-color: rgba(255,255,255,.16);
     }
 
-    /* more compelling FX invitation: pulse ring + slight breathing, but only when powered+not FX */
+    /* BIGGER / more dramatic pulse (your request) */
     @keyframes beckonRing {
       0%,100%{
-        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18),
-                    0 0 0 0 rgba(176,24,24,.00),
-                    0 0 0 0 rgba(176,24,24,.00);
-        transform: scale(1);
+        transform: scale(0.985);
+        box-shadow:
+          inset 0 0 0 6px rgba(0,0,0,.18),
+          0 0 0 0 rgba(176,24,24,.00),
+          0 0 0 0 rgba(176,24,24,.00);
       }
-      50%{
-        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18),
-                    0 0 0 10px rgba(176,24,24,.08),
-                    0 0 18px 0 rgba(176,24,24,.10);
-        transform: scale(1.045);
+      55%{
+        transform: scale(1.075);
+        box-shadow:
+          inset 0 0 0 6px rgba(0,0,0,.18),
+          0 0 0 18px rgba(176,24,24,.075),
+          0 0 26px 0 rgba(176,24,24,.12);
       }
     }
+
     .stage.powered:not(.fxOn) .labelBtn{
       animation: beckonRing 1.35s ease-in-out infinite;
     }
+
     .stage.fxOn .labelBtn{ animation:none; }
 
-    /* once FX is on, give a quiet “armed” halo */
     .stage.fxOn .label{
       box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 2px rgba(176,24,24,.22);
     }
@@ -257,7 +265,6 @@
     .npArtistLine .by{ opacity:.85; margin-right:6px; }
     .npTime{ margin-top:1px; font-size:13px; color:rgba(0,0,0,.45); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
 
-    /* controls */
     .controlRow{
       margin-top:10px;
       display:flex;
@@ -287,7 +294,7 @@
     }
     .navBtn:active{ transform:translateY(1px); }
 
-    /* Track-skip icons: |< and >| (so play is NOT confused with next) */
+    /* Track-skip icons: |< and >| */
     .skipIcon{
       width:20px; height:18px;
       position:relative;
@@ -314,7 +321,6 @@
     .skipNext .bar{ right:2px; }
     .skipNext .tri{ right:7px; border-left:11px solid var(--red); }
 
-    /* Pause/Play button: pause bars, and play triangle when paused */
     .pauseIcon{
       width:18px;height:18px;
       position:relative;
@@ -342,7 +348,6 @@
       margin-left:3px;
     }
 
-    /* power button stays as-is */
     .powerBtn{
       appearance:none;
       border:2px solid rgba(0,0,0,.28);
@@ -389,11 +394,14 @@
       <div id="stage" class="stage" aria-label="player">
         <div class="disc" aria-hidden="true">
           <div class="discBase"></div>
+
+          <div class="fxWrap" aria-hidden="true">
+            <div class="psy"></div>
+            <div class="psy2"></div>
+          </div>
+
           <div class="discGrooves"></div>
           <div class="discSheen"></div>
-
-          <div class="psy"></div>
-          <div class="psy2"></div>
 
           <button id="labelFx" class="labelBtn" type="button" aria-label="toggle fx">
             <div class="label"><div class="hole"></div></div>
@@ -748,6 +756,13 @@
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
 
+    // make the pulse timing slightly organic (randomize duration per cycle)
+    labelFx.addEventListener("animationiteration", () => {
+      if (!powered || fxOn) return;
+      const d = (1.05 + Math.random()*0.95).toFixed(2); // 1.05s–2.00s
+      labelFx.style.animationDuration = d + "s";
+    });
+
     fetch("playlist.json", { cache: "no-store" })
       .then(r => r.json())
       .then(list => {
@@ -755,7 +770,7 @@
         ready = tracks.length > 0;
 
         if (ready) setTrack(pickRandomIndex(-1), false);
-        else titleEl.textContent = "no tracks";
+        else titleEl.textContent = "playlist missing";
 
         setUI();
       })
