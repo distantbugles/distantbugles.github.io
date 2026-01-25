@@ -11,7 +11,6 @@
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
       --panel:#f6f6f4;
-
       --red:#b01818;
       --red2:#7f0f0f;
     }
@@ -95,7 +94,7 @@
     }
     .stage.fxOn .discSheen{ opacity:.50; }
 
-    /* FX visuals — circular (WebKit-safe) */
+    /* FX visuals — strictly circular (WebKit-safe) */
     .psy, .psy2{
       position:absolute;
       inset:-40%;
@@ -167,8 +166,10 @@
       border:1px solid rgba(255,255,255,.12);
       box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.08);
       display:flex; justify-content:center; align-items:center;
-      transition: background 220ms ease, border-color 220ms ease, box-shadow 180ms ease;
+      transition: background 220ms ease, border-color 220ms ease, box-shadow 180ms ease, transform 220ms ease;
     }
+
+    /* label turns red when playing (your established look) */
     .stage.spinning .label{
       background:
         radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
@@ -176,19 +177,26 @@
       border-color: rgba(255,255,255,.16);
     }
 
-    /* subtle “hint” that label is interactive (no cheesy icon) */
-    .labelBtn:focus-visible .label{
-      box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 2px rgba(176,24,24,.25);
-      outline: none;
+    /* NEW: “press me” pulse when powered on and FX is OFF */
+    .stage.on:not(.fxOn) .label{
+      animation: beckon 1.8s ease-in-out infinite;
     }
-    @media (hover:hover){
-      .labelBtn:hover .label{
-        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 2px rgba(0,0,0,.10);
+    @keyframes beckon{
+      0%,100%{
+        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 0 rgba(176,24,24,.00);
+        transform: scale(1);
       }
-      .stage.fxOn .labelBtn:hover .label{
-        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 2px rgba(176,24,24,.25);
+      50%{
+        box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 8px rgba(176,24,24,.10);
+        transform: scale(1.03);
       }
     }
+
+    /* stop pulsing when FX is on (because the record goes psychedelic) */
+    .stage.fxOn .label{ animation: none; }
+
+    /* a tiny tactile hint on press */
+    .labelBtn:active .label{ transform: scale(0.98); }
 
     .hole{
       width:28%;
@@ -206,17 +214,18 @@
     @media (prefers-reduced-motion: reduce){
       .stage.spinning .disc{ animation:none; }
       .psy,.psy2{ animation:none; }
+      .stage.on:not(.fxOn) .label{ animation:none; }
     }
 
     .np{ margin-top:8px; display:flex; justify-content:space-between; align-items:flex-end; gap:14px; }
 
+    /* NEW: show UI whenever powered ON, not only when spinning */
     .npText{
       opacity:0;
       transform:translateY(4px);
       transition:opacity 200ms ease, transform 200ms ease;
     }
-    .stage.spinning ~ .np .npText,
-    .stage.scrubbing ~ .np .npText{
+    .stage.on ~ .np .npText{
       opacity:1;
       transform:translateY(0);
     }
@@ -228,7 +237,6 @@
     .npArtistLine .by{ opacity:.85; margin-right:6px; }
     .npTime{ margin-top:1px; font-size:13px; color:rgba(0,0,0,.45); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
 
-    /* control row: prev | pause | next */
     .controlRow{
       margin-top:10px;
       display:flex;
@@ -239,8 +247,7 @@
       transform:translateY(4px);
       transition:opacity 260ms ease, transform 260ms ease;
     }
-    .stage.spinning ~ .np .controlRow,
-    .stage.scrubbing ~ .np .controlRow{
+    .stage.on ~ .np .controlRow{
       opacity:1;
       transform:translateY(0);
       pointer-events:auto;
@@ -280,11 +287,9 @@
     .pauseIcon::before{ left:3px; }
     .pauseIcon::after{ right:3px; }
 
-    /* when paused (but not powered off), show "play" triangle inside pause button */
+    /* when paused (but powered on), show play triangle */
     .pausedState .pauseIcon::before,
-    .pausedState .pauseIcon::after{
-      display:none;
-    }
+    .pausedState .pauseIcon::after{ display:none; }
     .pausedState .pauseIcon{
       width:0;height:0;
       border-top:9px solid transparent;
@@ -345,7 +350,6 @@
           <div class="psy"></div>
           <div class="psy2"></div>
 
-          <!-- label is clickable FX toggle -->
           <button id="labelFx" class="labelBtn" type="button" aria-label="toggle fx">
             <div class="label"><div class="hole"></div></div>
           </button>
@@ -376,7 +380,6 @@
           </div>
         </div>
 
-        <!-- power is hard-stop / blank state -->
         <button id="powerBtn" class="powerBtn" type="button" aria-label="power">
           <svg class="powerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 2v9"></path>
@@ -434,7 +437,7 @@
     let fbL = null, fbR = null, fbFilterL = null, fbFilterR = null;
     let delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
 
-    let powered = false;   // hard stop state
+    let powered = false;
 
     const makeImpulse = (ctx, seconds=3.2, decay=4.2) => {
       const rate = ctx.sampleRate;
@@ -574,6 +577,8 @@
     };
 
     const setUI = () => {
+      stage.classList.toggle("on", powered);
+
       const playing = powered && !audio.paused && !audio.ended;
       stage.classList.toggle("spinning", playing);
 
@@ -640,9 +645,8 @@
 
     // PAUSE: soft pause/resume without blanking UI
     pauseBtn.addEventListener("click", async () => {
-      if (!ready) return;
+      if (!ready || !powered) return;
       if (!ctx) await ensureGraph();
-      if (!powered) return;
 
       try{
         if (audio.paused || audio.ended) await audio.play();
@@ -651,7 +655,7 @@
       setUI();
     });
 
-    // Next/Prev (also reset FX off for sanity)
+    // Next/Prev (also reset FX off)
     nextBtn.addEventListener("click", async () => {
       if (!ready || !powered) return;
       await setFX(false);
