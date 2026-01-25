@@ -11,7 +11,6 @@
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
       --panel:#f6f6f4;
-
       --red:#b01818;
       --red2:#7f0f0f;
     }
@@ -183,8 +182,18 @@
     }
 
     .np{ margin-top:8px; display:flex; justify-content:space-between; align-items:flex-end; gap:14px; }
-    .npText{ opacity:0; transform:translateY(4px); transition:opacity 260ms ease, transform 260ms ease; }
-    .stage.spinning ~ .np .npText{ opacity:1; transform:translateY(0); }
+
+    /* show NP while playing OR while scrubbing (so it won't disappear) */
+    .npText{
+      opacity:0;
+      transform:translateY(4px);
+      transition:opacity 200ms ease, transform 200ms ease;
+    }
+    .stage.spinning ~ .np .npText,
+    .stage.scrubbing ~ .np .npText{
+      opacity:1;
+      transform:translateY(0);
+    }
 
     .npLabel{ font-size:13px; color:rgba(0,0,0,.78); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
     .npLabel span{ display:inline-block; transform:translateX(.35ch); }
@@ -193,7 +202,7 @@
     .npArtistLine .by{ opacity:.85; margin-right:6px; }
     .npTime{ margin-top:1px; font-size:13px; color:rgba(0,0,0,.45); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
 
-    /* Bottom control row: aligns bottoms across buttons + labels + power */
+    /* bottom row aligns all bottoms */
     .bottomRow{
       margin-top:8px;
       display:flex;
@@ -209,7 +218,8 @@
       transform:translateY(4px);
       transition:opacity 260ms ease, transform 260ms ease;
     }
-    .stage.spinning ~ .np .npNav{
+    .stage.spinning ~ .np .npNav,
+    .stage.scrubbing ~ .np .npNav{
       opacity:1;
       transform:translateY(0);
       pointer-events:auto;
@@ -301,12 +311,12 @@
       text-transform:lowercase;
     }
 
-    /* sliders: now live INSIDE bottom row, between nav buttons and power */
+    /* slider cluster between nav and power */
     .slotCluster{
       display:flex;
       align-items:flex-end;
       gap:18px;
-      margin-left:4px;
+      margin-left:8px;
     }
 
     .slotGroup{
@@ -325,13 +335,15 @@
       user-select:none;
       line-height:1;
       width:100%;
-      text-align:center;
+      text-align:center; /* fixes VOL centering */
     }
 
     .slotTicks{
       position:absolute;
       opacity:.28;
       pointer-events:none;
+      left:50%;
+      transform:translateX(-50%);
     }
     .slotTicksH{
       width:150px;
@@ -573,7 +585,6 @@
     // WebAudio graph (dry + wet)
     let ctx = null, src = null;
     let dryGain = null, wetGain = null, master = null, limiter = null;
-
     let hp = null, lp = null;
     let split = null, merge = null, dL = null, dR = null, fbL = null, fbR = null;
     let fbFilterL = null, fbFilterR = null, delayDirect = null, delayToVerb = null, conv = null, preDelay = null;
@@ -742,7 +753,7 @@
       stage.classList.toggle("spinning", playing);
       btn.setAttribute("aria-label", playing ? "pause" : "play");
       updateTime();
-      if (!playing) stage.classList.remove("fxOn");
+      if (!playing && !scrubbing) stage.classList.remove("fxOn");
       else if (fxOn) stage.classList.add("fxOn");
     };
 
@@ -844,15 +855,18 @@
       setUI();
     });
 
-    audio.addEventListener("pause", setUI);
+    audio.addEventListener("pause", () => {
+      if (!scrubbing) setUI();
+    });
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
 
-    /* Scrubber: pause while dragging; seek on release */
+    /* Scrubber: pause while dragging; seek on release — keep UI visible during drag */
     const durSafe = () => (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
 
     scrub.addEventListener("pointerdown", () => {
       scrubbing = true;
+      stage.classList.add("scrubbing");
       wasPlaying = !audio.paused && !audio.ended;
       if (wasPlaying) audio.pause();
     });
@@ -860,6 +874,8 @@
     window.addEventListener("pointerup", () => {
       if (!scrubbing) return;
       scrubbing = false;
+      stage.classList.remove("scrubbing");
+
       const dur = durSafe();
       if (dur > 0) {
         audio.currentTime = pendingTime;
@@ -867,6 +883,7 @@
       }
       wasPlaying = false;
       updateTime();
+      setUI();
     });
 
     scrub.addEventListener("input", () => {
