@@ -259,24 +259,42 @@
       filter: drop-shadow(0 0 8px rgba(176,24,24,.22));
     }
 
+    /* FX button: match the record’s conic palette + counterclockwise motion */
+    .stage.fxOn ~ .np #fxBtn::before{
+      content:"";
+      position:absolute;
+      inset:-18px;
+      background: conic-gradient(from 0deg,
+        rgba(255, 40, 120,.00),
+        rgba(255, 40, 120,.45),
+        rgba(60, 255, 200,.00),
+        rgba(60, 255, 200,.45),
+        rgba(255, 220, 40,.00),
+        rgba(255, 220, 40,.45),
+        rgba(120, 80, 255,.00),
+        rgba(120, 80, 255,.45),
+        rgba(255, 40, 120,.00)
+      );
+      filter: blur(3px);
+      opacity:.55;
+      z-index:0;
+      animation: fxSpinCCW 2.2s linear infinite;
+    }
+    @keyframes fxSpinCCW{ to { transform: rotate(-360deg); } }
+
     .stage.fxOn ~ .np #fxBtn::after{
-      content:""; position:absolute; inset:6px; border-radius:999px; border:1px solid rgba(176,24,24,.35);
-      z-index:1; animation: fxPulse 1.2s ease-in-out infinite;
+      content:"";
+      position:absolute;
+      inset:6px;
+      border-radius:999px;
+      border:1px solid rgba(176,24,24,.35);
+      z-index:1;
+      animation: fxPulse 1.2s ease-in-out infinite;
     }
     @keyframes fxPulse{
-      0%,100%{ transform: scale(1); opacity:.45; }
+      0%,100%{ transform: scale(1); opacity:.40; }
       50%{ transform: scale(1.10); opacity:.10; }
     }
-    .stage.fxOn ~ .np #fxBtn::before{
-      content:""; position:absolute; inset:-18px;
-      background: conic-gradient(from 0deg,
-        rgba(176,24,24,.00), rgba(176,24,24,.18),
-        rgba(176,24,24,.00), rgba(176,24,24,.14), rgba(176,24,24,.00)
-      );
-      filter: blur(3px); opacity:.70; z-index:0;
-      animation: fxSpin 2.2s linear infinite;
-    }
-    @keyframes fxSpin{ to { transform: rotate(360deg); } }
 
     .powerBtn{
       appearance:none;
@@ -327,6 +345,10 @@
       position:relative;
     }
 
+    /* lock widths so labels stay centered under their own controls */
+    .posGroup{ width:150px; }
+    .volGroup{ width:22px; }
+
     .slotLabel{
       font-size:10px;
       color:rgba(0,0,0,.46);
@@ -335,7 +357,7 @@
       user-select:none;
       line-height:1;
       width:100%;
-      text-align:center; /* fixes VOL centering */
+      text-align:center;
     }
 
     .slotTicks{
@@ -582,7 +604,6 @@
 
     let fxOn = false;
 
-    // WebAudio graph (dry + wet)
     let ctx = null, src = null;
     let dryGain = null, wetGain = null, master = null, limiter = null;
     let hp = null, lp = null;
@@ -695,7 +716,6 @@
       delayToVerb.connect(conv);
       conv.connect(wetGain);
 
-      // initial volume from slider
       const v = Math.max(0, Math.min(100, Number(vol.value))) / 100;
       const gain = Math.pow(v, 1.6);
       master.gain.value = 0.15 + gain * 0.95;
@@ -861,7 +881,6 @@
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
 
-    /* Scrubber: pause while dragging; seek on release — keep UI visible during drag */
     const durSafe = () => (isFinite(audio.duration) && audio.duration) ? audio.duration : 0;
 
     scrub.addEventListener("pointerdown", () => {
