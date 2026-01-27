@@ -40,6 +40,7 @@
       box-shadow: 0 16px 40px rgba(0,0,0,.06), inset 0 0 0 1px rgba(0,0,0,.06);
     }
 
+    /* compact plinth (your current preferred feel) */
     .stage{
       width:100%;
       aspect-ratio:11/9.35;
@@ -192,6 +193,7 @@
       border-color: rgba(255,255,255,.16);
     }
 
+    /* pulse (already tuned and you like it) */
     @keyframes beckonRing {
       0%,100%{
         transform: scale(0.985);
@@ -250,11 +252,8 @@
     }
 
     .npLabel{ font-size:13px; color:rgba(0,0,0,.78); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
-    .npTitleLine{ margin-top:1px; display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; }
-    .npTitle{ font-size:15px; color:var(--red); letter-spacing:.11em; text-transform:lowercase; }
-    .npAlbum{ font-size:12px; color:rgba(176,24,24,.55); font-style:italic; letter-spacing:.06em; text-transform:lowercase; }
-    .npArtistLine{ margin-top:2px; font-size:13px; color:var(--red); letter-spacing:.04em; text-transform:lowercase; }
-    .npArtistLine .by{ opacity:.85; margin-right:6px; }
+    .npTitle{ margin-top:1px; font-size:16px; color:var(--red); letter-spacing:.11em; text-transform:lowercase; } /* +1 size */
+    .npTake{ margin-top:2px; font-size:13px; color:var(--red); letter-spacing:.03em; text-transform:lowercase; }
     .npTime{ margin-top:1px; font-size:13px; color:rgba(0,0,0,.45); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
 
     .controlRow{
@@ -286,6 +285,7 @@
     }
     .navBtn:active{ transform:translateY(1px); }
 
+    /* Track-skip icons: |< and >| */
     .skipIcon{ width:20px; height:18px; position:relative; }
     .skipIcon .bar{
       position:absolute; top:1px; bottom:1px; width:3px;
@@ -391,16 +391,9 @@
 
       <div class="np">
         <div class="npText" aria-hidden="true">
-          <div class="npLabel"><span>now playing:</span></div>
-
-          <div class="npTitleLine">
-            <span class="npTitle" id="trackTitle">loading…</span>
-            <span class="npAlbum" id="trackAlbum" style="display:none;"></span>
-          </div>
-
-          <div class="npArtistLine" id="artistLine">
-            <span class="by">by:</span><span id="trackArtist"></span>
-          </div>
+          <div class="npLabel">now playing:</div>
+          <div class="npTitle" id="trackTitle">loading…</div>
+          <div class="npTake" id="trackTake"> </div>
           <div class="npTime" id="trackTime">0:00 / 0:00</div>
 
           <div class="controlRow">
@@ -458,12 +451,10 @@
     const labelFx = document.getElementById("labelFx");
 
     const titleEl = document.getElementById("trackTitle");
-    const albumEl = document.getElementById("trackAlbum");
-    const artistEl = document.getElementById("trackArtist");
-    const artistLine = document.getElementById("artistLine");
+    const takeEl = document.getElementById("trackTake");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !powerBtn || !prevBtn || !nextBtn || !pauseBtn || !labelFx || !titleEl || !albumEl || !artistEl || !artistLine || !timeEl) return;
+    if (!audio || !stage || !powerBtn || !prevBtn || !nextBtn || !pauseBtn || !labelFx || !titleEl || !takeEl || !timeEl) return;
 
     let tracks = [];
     let currentIdx = -1;
@@ -473,6 +464,7 @@
     let fxOn = false;
     let powered = false;
 
+    // WebAudio graph (dry + wet)
     let ctx = null, src = null;
     let dryGain = null, wetGain = null, master = null, limiter = null;
     let hp = null, lp = null, split = null, merge = null, dL = null, dR = null;
@@ -616,6 +608,28 @@
       timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
     };
 
+    const deriveAlbum = (filePath) => {
+      try{
+        const parts = decodeURIComponent(filePath).split("/");
+        const folder = parts[1] || "";
+        const dash = folder.indexOf(" - ");
+        if (dash === -1) return "";
+        const album = folder.slice(dash + 3).trim().toLowerCase();
+
+        if (folder.toLowerCase() === "fauna flora - fauna flora") return "fauna flora";
+        if (album === "unreleased") return "unreleased";
+        return album;
+      } catch(e){
+        return "";
+      }
+    };
+
+    const setTakeLine = (album, artist) => {
+      if (!album) { takeEl.textContent = ""; return; }
+      if (album === "unreleased") { takeEl.textContent = "unreleased"; return; }
+      takeEl.textContent = `taken from '${album}' by ${artist}`;
+    };
+
     const setUI = () => {
       stage.classList.toggle("powered", powered);
 
@@ -638,31 +652,12 @@
       return i;
     };
 
-    const deriveAlbum = (filePath) => {
-      try{
-        const parts = decodeURIComponent(filePath).split("/");
-        // audio/<folder>/<file>
-        const folder = parts[1] || "";
-        // folder format: "artist - album"
-        const dash = folder.indexOf(" - ");
-        if (dash === -1) return "";
-        const album = folder.slice(dash + 3).trim().toLowerCase();
-
-        if (folder.toLowerCase() === "fauna flora - fauna flora") return "self-titled";
-        if (album === "unreleased") return "unreleased";
-        return album;
-      } catch(e){
-        return "";
-      }
-    };
-
     const setTrack = (idx, autoplay) => {
       const t = tracks[idx];
       if (!t) return;
 
       currentIdx = idx;
 
-      // robust URL encoding for spaces/apostrophes + folders
       const url = new URL(t.file, window.location.href);
       audio.src = url.toString();
 
@@ -670,17 +665,9 @@
       const artist = (t.artist || "").toLowerCase();
 
       titleEl.textContent = title || "unknown";
-      artistEl.textContent = artist;
-      artistLine.style.display = artist ? "" : "none";
 
       const album = deriveAlbum(t.file);
-      if (album) {
-        albumEl.style.display = "";
-        albumEl.textContent = `(${album})`;
-      } else {
-        albumEl.style.display = "none";
-        albumEl.textContent = "";
-      }
+      setTakeLine(album, artist);
 
       audio.load();
       updateTime();
@@ -695,6 +682,33 @@
       setTrack(nextIdx, autoplay);
     };
 
+    // runaway protection for missing files
+    let errBurst = 0;
+    let lastErrAt = 0;
+
+    const handleAudioError = async () => {
+      if (!powered) return;
+
+      const now = Date.now();
+      if (now - lastErrAt < 1200) errBurst++;
+      else errBurst = 1;
+      lastErrAt = now;
+
+      // after 3 rapid errors, stop auto-skipping completely
+      if (errBurst >= 3) {
+        audio.pause();
+        setTakeLine("unreleased", ""); // reuse style: show "unreleased" as a neutral “not available yet”
+        takeEl.textContent = "not available yet";
+        setUI();
+        return;
+      }
+
+      await setFX(false);
+      setTimeout(() => playRandomNext(true), 260);
+      setUI();
+    };
+
+    // power
     powerBtn.addEventListener("click", async () => {
       if (!ready) return;
       if (!ctx) await ensureGraph();
@@ -711,6 +725,7 @@
       setUI();
     });
 
+    // pause/resume
     pauseBtn.addEventListener("click", async () => {
       if (!ready || !powered) return;
       if (!ctx) await ensureGraph();
@@ -722,6 +737,7 @@
       setUI();
     });
 
+    // next/prev (reset FX off)
     nextBtn.addEventListener("click", async () => {
       if (!ready || !powered) return;
       await setFX(false);
@@ -750,6 +766,7 @@
       setUI();
     });
 
+    // label fx
     labelFx.addEventListener("click", async () => {
       if (!ready || !powered) return;
       await setFX(!fxOn);
@@ -767,26 +784,19 @@
       if (ctx && ctx.state === "suspended") ctx.resume();
       setUI();
     });
+
     audio.addEventListener("pause", setUI);
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
+    audio.addEventListener("error", handleAudioError);
 
-    /* if a file fails to load (0/0), skip to next */
-    audio.addEventListener("error", async () => {
-      if (!powered) return;
-      await setFX(false);
-      setTimeout(() => playRandomNext(true), 250);
-      setUI();
-    });
-
-    /* make the pulse feel organic by changing duration each loop */
+    // pulse timing feels organic
     labelFx.addEventListener("animationiteration", () => {
       if (!powered || fxOn) return;
-      const d = (1.05 + Math.random()*0.95).toFixed(2); // 1.05s–2.00s
+      const d = (1.05 + Math.random()*0.95).toFixed(2);
       labelFx.style.animationDuration = d + "s";
     });
 
-    /* cache-bust playlist fetch so folder renames show immediately */
     fetch("playlist.json?v=" + Date.now(), { cache: "no-store" })
       .then(r => r.json())
       .then(list => {
@@ -801,10 +811,7 @@
       .catch(() => {
         ready = false;
         titleEl.textContent = "playlist missing";
-        artistEl.textContent = "";
-        artistLine.style.display = "none";
-        albumEl.style.display = "none";
-        albumEl.textContent = "";
+        takeEl.textContent = "";
         timeEl.textContent = "0:00 / 0:00";
         setUI();
       });
