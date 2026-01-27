@@ -229,7 +229,7 @@
     .stage.powered ~ .np .npText{ opacity:1; transform:translateY(0); }
 
     .npLabel{ font-size:13px; color:rgba(0,0,0,.78); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
-    .npTitle{ margin-top:1px; font-size:15px; color:var(--red); letter-spacing:.11em; text-transform:lowercase; }
+    .npTitle{ margin-top:1px; font-size:16px; color:var(--red); letter-spacing:.11em; text-transform:lowercase; }
     .npMetaLine{ margin-top:2px; font-size:13px; letter-spacing:.03em; text-transform:lowercase; }
     .npMetaDim{ color:rgba(0,0,0,.55); font-style:italic; }
     .npMetaHot{ color:var(--red); }
@@ -368,7 +368,7 @@
           <div class="npLabel">now playing:</div>
           <div class="npTitle" id="trackTitle">loading…</div>
 
-          <div class="npMetaLine" id="metaLine">
+          <div class="npMetaLine">
             <span class="npMetaDim">taken from </span>
             <span class="npMetaHot" id="albumHot">''</span>
             <span class="npMetaDim"> by </span>
@@ -587,26 +587,32 @@
       timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
     };
 
+    // FIX: folder is now a hyphen slug (fauna-flora-fauna-flora, steve-ward-see-and-be-seen, steve-ward-unreleased)
     const deriveAlbum = (filePath) => {
       try{
         const parts = decodeURIComponent(filePath).split("/");
-        const folder = parts[1] || "";
-        const dash = folder.indexOf(" - ");
-        if (dash === -1) return "";
-        const album = folder.slice(dash + 3).trim().toLowerCase();
-        if (folder.toLowerCase() === "fauna-flora-fauna-flora") return "fauna flora";
-        if (album === "unreleased") return "unreleased";
-        return album;
+        const folder = parts[1] || ""; // e.g. "steve-ward-see-and-be-seen"
+        if (!folder) return "";
+
+        if (folder === "fauna-flora-fauna-flora") return "fauna flora";
+        if (folder === "steve-ward-unreleased") return "unreleased";
+
+        if (folder.startsWith("steve-ward-")) {
+          return folder.replace(/^steve-ward-/, "").replace(/-/g, " ");
+        }
+
+        // fallback: replace hyphens with spaces
+        return folder.replace(/-/g, " ");
       } catch(e){
         return "";
       }
     };
 
     const setMetaLine = (album, artist) => {
-      const a = (album || "").toLowerCase();
-      const r = (artist || "").toLowerCase();
-      albumHot.textContent = `'${a || "unreleased"}'`;
-      artistHot.textContent = `'${r || "unknown"}'`;
+      const a = (album || "unreleased").toLowerCase();
+      const r = (artist || "unknown").toLowerCase();
+      albumHot.textContent = `'${a}'`;
+      artistHot.textContent = `'${r}'`;
     };
 
     const setUI = () => {
@@ -640,7 +646,7 @@
       titleEl.textContent = title || "unknown";
 
       const album = deriveAlbum(t.file);
-      setMetaLine(album || "unreleased", artist);
+      setMetaLine(album, artist);
 
       audio.load();
       updateTime();
@@ -655,7 +661,6 @@
       setTrack(nextIdx, autoplay);
     };
 
-    // runaway protection for missing files
     let errBurst = 0;
     let lastErrAt = 0;
 
