@@ -11,7 +11,6 @@
       --bg:#fff;
       --muted:rgba(0,0,0,.58);
       --panel:#f6f6f4;
-
       --red:#b01818;
       --red2:#7f0f0f;
     }
@@ -41,7 +40,6 @@
       box-shadow: 0 16px 40px rgba(0,0,0,.06), inset 0 0 0 1px rgba(0,0,0,.06);
     }
 
-    /* plinth height tighter (you liked this) */
     .stage{
       width:100%;
       aspect-ratio:11/9.35;
@@ -60,8 +58,8 @@
       box-shadow:0 18px 55px rgba(0,0,0,.22);
       user-select:none;
       transform: translateZ(0);
-      isolation:isolate;        /* helps mobile blending bugs */
-      contain: paint;           /* helps mobile clipping bugs */
+      isolation:isolate;
+      contain: paint;
     }
 
     .discBase{
@@ -100,7 +98,7 @@
     }
     .stage.fxOn .discSheen{ opacity:.50; }
 
-    /* Dedicated circular FX clip wrapper (kills the “square around the circle” on iOS) */
+    /* Dedicated circular FX clip wrapper (kills the iOS “square”) */
     .fxWrap{
       position:absolute;
       inset:0;
@@ -129,7 +127,6 @@
       backface-visibility:hidden;
     }
 
-    /* No filters + no mix-blend on these = much less WebKit weirdness */
     .psy{
       background: conic-gradient(from 0deg,
         rgba(255, 40, 120, 0.00),
@@ -143,7 +140,7 @@
         rgba(255, 40, 120, 0.00)
       );
       animation: psySpin 2.4s linear infinite;
-      opacity:0;
+      transform: scale(1.75);
     }
     .psy2{
       background:
@@ -152,19 +149,19 @@
         radial-gradient(circle at 55% 70%, rgba(255,0,110,.35), rgba(0,0,0,0) 48%),
         radial-gradient(circle at 35% 75%, rgba(255,240,0,.28), rgba(0,0,0,0) 52%);
       animation: psyBreath 1.9s ease-in-out infinite;
-      opacity:0;
+      transform: scale(1.35);
     }
 
     .stage.fxOn .psy{ opacity:.70; }
     .stage.fxOn .psy2{ opacity:.55; }
 
-    @keyframes psySpin { to { transform: rotate(360deg); } }
+    @keyframes psySpin { to { transform: scale(1.75) rotate(360deg); } }
     @keyframes psyBreath {
-      0%,100% { transform: scale(1) rotate(0deg); }
-      50% { transform: scale(1.05) rotate(10deg); }
+      0%,100% { transform: scale(1.35) rotate(0deg); }
+      50% { transform: scale(1.42) rotate(10deg); }
     }
 
-    /* label is the FX toggle target */
+    /* label is FX toggle */
     .labelBtn{
       position:absolute; inset:0; margin:auto;
       width:22%; aspect-ratio:1/1; border-radius:50%;
@@ -188,7 +185,6 @@
       transform: translateZ(0);
     }
 
-    /* label goes red when spinning (like before) */
     .stage.spinning .label{
       background:
         radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
@@ -196,7 +192,6 @@
       border-color: rgba(255,255,255,.16);
     }
 
-    /* BIGGER / more dramatic pulse (your request) */
     @keyframes beckonRing {
       0%,100%{
         transform: scale(0.985);
@@ -213,13 +208,10 @@
           0 0 26px 0 rgba(176,24,24,.12);
       }
     }
-
     .stage.powered:not(.fxOn) .labelBtn{
       animation: beckonRing 1.35s ease-in-out infinite;
     }
-
     .stage.fxOn .labelBtn{ animation:none; }
-
     .stage.fxOn .label{
       box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 2px rgba(176,24,24,.22);
     }
@@ -247,7 +239,6 @@
 
     .np{ margin-top:6px; display:flex; justify-content:space-between; align-items:flex-end; gap:14px; }
 
-    /* show UI whenever powered, even if paused */
     .npText{
       opacity:0;
       transform:translateY(4px);
@@ -259,8 +250,9 @@
     }
 
     .npLabel{ font-size:13px; color:rgba(0,0,0,.78); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
-    .npLabel span{ display:inline-block; transform:translateX(.35ch); }
-    .npTitle{ margin-top:1px; font-size:15px; color:var(--red); letter-spacing:.11em; text-transform:lowercase; }
+    .npTitleLine{ margin-top:1px; display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; }
+    .npTitle{ font-size:15px; color:var(--red); letter-spacing:.11em; text-transform:lowercase; }
+    .npAlbum{ font-size:12px; color:rgba(176,24,24,.55); font-style:italic; letter-spacing:.06em; text-transform:lowercase; }
     .npArtistLine{ margin-top:2px; font-size:13px; color:var(--red); letter-spacing:.04em; text-transform:lowercase; }
     .npArtistLine .by{ opacity:.85; margin-right:6px; }
     .npTime{ margin-top:1px; font-size:13px; color:rgba(0,0,0,.45); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
@@ -294,27 +286,15 @@
     }
     .navBtn:active{ transform:translateY(1px); }
 
-    /* Track-skip icons: |< and >| */
-    .skipIcon{
-      width:20px; height:18px;
-      position:relative;
-    }
+    .skipIcon{ width:20px; height:18px; position:relative; }
     .skipIcon .bar{
-      position:absolute;
-      top:1px; bottom:1px;
-      width:3px;
-      background: var(--red);
-      border-radius:2px;
-      opacity:.85;
+      position:absolute; top:1px; bottom:1px; width:3px;
+      background: var(--red); border-radius:2px; opacity:.85;
     }
     .skipIcon .tri{
-      position:absolute;
-      top:50%;
-      width:0;height:0;
-      border-top:7px solid transparent;
-      border-bottom:7px solid transparent;
-      transform: translateY(-50%);
-      opacity:.95;
+      position:absolute; top:50%; width:0;height:0;
+      border-top:7px solid transparent; border-bottom:7px solid transparent;
+      transform: translateY(-50%); opacity:.95;
     }
     .skipPrev .bar{ left:2px; }
     .skipPrev .tri{ left:7px; border-right:11px solid var(--red); }
@@ -412,7 +392,12 @@
       <div class="np">
         <div class="npText" aria-hidden="true">
           <div class="npLabel"><span>now playing:</span></div>
-          <div class="npTitle" id="trackTitle">loading…</div>
+
+          <div class="npTitleLine">
+            <span class="npTitle" id="trackTitle">loading…</span>
+            <span class="npAlbum" id="trackAlbum" style="display:none;"></span>
+          </div>
+
           <div class="npArtistLine" id="artistLine">
             <span class="by">by:</span><span id="trackArtist"></span>
           </div>
@@ -473,11 +458,12 @@
     const labelFx = document.getElementById("labelFx");
 
     const titleEl = document.getElementById("trackTitle");
+    const albumEl = document.getElementById("trackAlbum");
     const artistEl = document.getElementById("trackArtist");
     const artistLine = document.getElementById("artistLine");
     const timeEl = document.getElementById("trackTime");
 
-    if (!audio || !stage || !powerBtn || !prevBtn || !nextBtn || !pauseBtn || !labelFx || !titleEl || !artistEl || !artistLine || !timeEl) return;
+    if (!audio || !stage || !powerBtn || !prevBtn || !nextBtn || !pauseBtn || !labelFx || !titleEl || !albumEl || !artistEl || !artistLine || !timeEl) return;
 
     let tracks = [];
     let currentIdx = -1;
@@ -487,7 +473,6 @@
     let fxOn = false;
     let powered = false;
 
-    // WebAudio graph (dry + wet)
     let ctx = null, src = null;
     let dryGain = null, wetGain = null, master = null, limiter = null;
     let hp = null, lp = null, split = null, merge = null, dL = null, dR = null;
@@ -653,12 +638,33 @@
       return i;
     };
 
+    const deriveAlbum = (filePath) => {
+      try{
+        const parts = decodeURIComponent(filePath).split("/");
+        // audio/<folder>/<file>
+        const folder = parts[1] || "";
+        // folder format: "artist - album"
+        const dash = folder.indexOf(" - ");
+        if (dash === -1) return "";
+        const album = folder.slice(dash + 3).trim().toLowerCase();
+
+        if (folder.toLowerCase() === "fauna flora - fauna flora") return "self-titled";
+        if (album === "unreleased") return "unreleased";
+        return album;
+      } catch(e){
+        return "";
+      }
+    };
+
     const setTrack = (idx, autoplay) => {
       const t = tracks[idx];
       if (!t) return;
 
       currentIdx = idx;
-      audio.src = encodeURI(t.file);
+
+      // robust URL encoding for spaces/apostrophes + folders
+      const url = new URL(t.file, window.location.href);
+      audio.src = url.toString();
 
       const title = (t.title || "").toLowerCase();
       const artist = (t.artist || "").toLowerCase();
@@ -666,6 +672,15 @@
       titleEl.textContent = title || "unknown";
       artistEl.textContent = artist;
       artistLine.style.display = artist ? "" : "none";
+
+      const album = deriveAlbum(t.file);
+      if (album) {
+        albumEl.style.display = "";
+        albumEl.textContent = `(${album})`;
+      } else {
+        albumEl.style.display = "none";
+        albumEl.textContent = "";
+      }
 
       audio.load();
       updateTime();
@@ -756,14 +771,23 @@
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateTime);
 
-    // make the pulse timing slightly organic (randomize duration per cycle)
+    /* if a file fails to load (0/0), skip to next */
+    audio.addEventListener("error", async () => {
+      if (!powered) return;
+      await setFX(false);
+      setTimeout(() => playRandomNext(true), 250);
+      setUI();
+    });
+
+    /* make the pulse feel organic by changing duration each loop */
     labelFx.addEventListener("animationiteration", () => {
       if (!powered || fxOn) return;
       const d = (1.05 + Math.random()*0.95).toFixed(2); // 1.05s–2.00s
       labelFx.style.animationDuration = d + "s";
     });
 
-    fetch("playlist.json", { cache: "no-store" })
+    /* cache-bust playlist fetch so folder renames show immediately */
+    fetch("playlist.json?v=" + Date.now(), { cache: "no-store" })
       .then(r => r.json())
       .then(list => {
         tracks = Array.isArray(list) ? list : [];
@@ -779,6 +803,8 @@
         titleEl.textContent = "playlist missing";
         artistEl.textContent = "";
         artistLine.style.display = "none";
+        albumEl.style.display = "none";
+        albumEl.textContent = "";
         timeEl.textContent = "0:00 / 0:00";
         setUI();
       });
