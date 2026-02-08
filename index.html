@@ -69,19 +69,56 @@
         radial-gradient(circle at center, #2a2a2c 0%, #111114 62%, #0b0b0c 100%);
     }
 
+    .discGrooves{
+      position:absolute; inset:0; border-radius:50%; opacity:.24;
+      background: repeating-radial-gradient(circle at center,
+        rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px,
+        rgba(0,0,0,0) 3px, rgba(0,0,0,0) 6px
+      );
+      mix-blend-mode: screen;
+      -webkit-mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
+      mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
+    }
+
+    .discSheen{
+      position:absolute; inset:-35%;
+      border-radius:50%;
+      opacity:.32;
+      transition:opacity 220ms ease;
+      background: conic-gradient(
+        from 0deg,
+        rgba(255,255,255,0.00) 0deg, rgba(255,255,255,0.14) 22deg,
+        rgba(255,255,255,0.00) 70deg, rgba(255,255,255,0.00) 180deg,
+        rgba(255,255,255,0.10) 230deg, rgba(255,255,255,0.00) 290deg,
+        rgba(255,255,255,0.00) 360deg
+      );
+      mix-blend-mode: screen;
+      pointer-events:none;
+      transform: translateZ(0);
+    }
+    .stage.fxOn .discSheen{ opacity:.50; }
+
     .fxWrap{
-      position:absolute; inset:0; border-radius:50%; overflow:hidden; pointer-events:none;
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      overflow:hidden;
+      pointer-events:none;
       transform: translateZ(0);
       contain: paint;
       -webkit-mask-image: radial-gradient(circle at center, #000 99%, transparent 100%);
       mask-image: radial-gradient(circle at center, #000 99%, transparent 100%);
-      -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-      -webkit-mask-position:center; mask-position:center;
-      -webkit-mask-size:100% 100%; mask-size:100% 100%;
+      -webkit-mask-repeat:no-repeat;
+      mask-repeat:no-repeat;
+      -webkit-mask-position:center;
+      mask-position:center;
+      -webkit-mask-size:100% 100%;
+      mask-size:100% 100%;
     }
 
     .psy, .psy2{
-      position:absolute; inset:0;
+      position:absolute;
+      inset:0;
       opacity:0;
       transition: opacity 200ms ease;
       transform-origin: 50% 50%;
@@ -118,41 +155,16 @@
     .stage.fxOn .psy2{ opacity:.55; }
 
     @keyframes psySpin { to { transform: scale(1.75) rotate(360deg); } }
-    @keyframes psyBreath { 0%,100% { transform: scale(1.35) rotate(0deg); } 50% { transform: scale(1.42) rotate(10deg); } }
-
-    .discGrooves{
-      position:absolute; inset:0; border-radius:50%; opacity:.24;
-      background: repeating-radial-gradient(circle at center,
-        rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px,
-        rgba(0,0,0,0) 3px, rgba(0,0,0,0) 6px
-      );
-      mix-blend-mode: screen;
-      -webkit-mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
-      mask-image: radial-gradient(circle at center, transparent 0 28%, #000 30% 100%);
+    @keyframes psyBreath {
+      0%,100% { transform: scale(1.35) rotate(0deg); }
+      50% { transform: scale(1.42) rotate(10deg); }
     }
-
-    .discSheen{
-      position:absolute; inset:-35%;
-      border-radius:50%;
-      opacity:.32;
-      transition:opacity 220ms ease;
-      background: conic-gradient(
-        from 0deg,
-        rgba(255,255,255,0.00) 0deg, rgba(255,255,255,0.14) 22deg,
-        rgba(255,255,255,0.00) 70deg, rgba(255,255,255,0.00) 180deg,
-        rgba(255,255,255,0.10) 230deg, rgba(255,255,255,0.00) 290deg,
-        rgba(255,255,255,0.00) 360deg
-      );
-      mix-blend-mode: screen;
-      pointer-events:none;
-      transform: translateZ(0);
-    }
-    .stage.fxOn .discSheen{ opacity:.50; }
 
     .labelBtn{
       position:absolute; inset:0; margin:auto;
       width:22%; aspect-ratio:1/1; border-radius:50%;
-      border:0; padding:0;
+      border:0;
+      padding:0;
       background: transparent;
       cursor:pointer;
       z-index:10;
@@ -194,9 +206,13 @@
           0 0 26px 0 rgba(176,24,24,.12);
       }
     }
-    .stage.powered:not(.fxOn) .labelBtn{ animation: beckonRing 1.35s ease-in-out infinite; }
+    .stage.powered:not(.fxOn) .labelBtn{
+      animation: beckonRing 1.35s ease-in-out infinite;
+    }
     .stage.fxOn .labelBtn{ animation:none; }
-    .stage.fxOn .label{ box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 2px rgba(176,24,24,.22); }
+    .stage.fxOn .label{
+      box-shadow: inset 0 0 0 6px rgba(0,0,0,.18), 0 0 0 2px rgba(176,24,24,.22);
+    }
 
     .labelBtn:active .label{ transform: scale(0.98); }
 
@@ -226,13 +242,14 @@
       transform:translateY(4px);
       transition:opacity 200ms ease, transform 200ms ease;
     }
-    .stage.powered ~ .np .npText{ opacity:1; transform:translateY(0); }
+    .stage.powered ~ .np .npText{
+      opacity:1;
+      transform:translateY(0);
+    }
 
     .npLabel{ font-size:13px; color:rgba(0,0,0,.78); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
-    .npTitle{ margin-top:1px; font-size:15px; color:var(--red); letter-spacing:.11em; text-transform:lowercase; }
-    .npMetaLine{ margin-top:2px; font-size:13px; letter-spacing:.03em; text-transform:lowercase; }
-    .npMetaDim{ color:rgba(0,0,0,.55); font-style:italic; }
-    .npMetaHot{ color:var(--red); }
+    .npTitle{ margin-top:1px; font-size:16px; color:var(--red); letter-spacing:.11em; text-transform:lowercase; }
+    .npTake{ margin-top:2px; font-size:13px; color:rgba(0,0,0,.58); font-style:italic; letter-spacing:.03em; text-transform:lowercase; }
     .npTime{ margin-top:1px; font-size:13px; color:rgba(0,0,0,.45); font-style:italic; letter-spacing:.04em; text-transform:lowercase; }
 
     .controlRow{
@@ -245,7 +262,11 @@
       transform:translateY(4px);
       transition:opacity 260ms ease, transform 260ms ease;
     }
-    .stage.powered ~ .np .controlRow{ opacity:1; transform:translateY(0); pointer-events:auto; }
+    .stage.powered ~ .np .controlRow{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
 
     .navBtn{
       appearance:none;
@@ -367,14 +388,7 @@
         <div class="npText" aria-hidden="true">
           <div class="npLabel">now playing:</div>
           <div class="npTitle" id="trackTitle">loading…</div>
-
-          <div class="npMetaLine">
-            <span class="npMetaDim">taken from </span>
-            <span class="npMetaHot" id="albumHot">''</span>
-            <span class="npMetaDim"> by </span>
-            <span class="npMetaHot" id="artistHot">''</span>
-          </div>
-
+          <div class="npTake" id="trackTake"> </div>
           <div class="npTime" id="trackTime">0:00 / 0:00</div>
 
           <div class="controlRow">
@@ -385,7 +399,7 @@
             </button>
 
             <button class="navBtn" id="pauseBtn" type="button" aria-label="pause or resume">
-              <span class="pauseIcon" aria-hidden="true"></span>
+              <span id="pauseIcon" class="pauseIcon" aria-hidden="true"></span>
             </button>
 
             <button class="navBtn" id="nextBtn" type="button" aria-label="next">
@@ -424,6 +438,7 @@
   (() => {
     const audio = document.getElementById("player");
     const stage = document.getElementById("stage");
+
     const powerBtn = document.getElementById("powerBtn");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
@@ -431,11 +446,10 @@
     const labelFx = document.getElementById("labelFx");
 
     const titleEl = document.getElementById("trackTitle");
+    const takeEl = document.getElementById("trackTake");
     const timeEl = document.getElementById("trackTime");
-    const albumHot = document.getElementById("albumHot");
-    const artistHot = document.getElementById("artistHot");
 
-    if (!audio || !stage || !powerBtn || !prevBtn || !nextBtn || !pauseBtn || !labelFx || !titleEl || !timeEl || !albumHot || !artistHot) return;
+    if (!audio || !stage || !powerBtn || !prevBtn || !nextBtn || !pauseBtn || !labelFx || !titleEl || !takeEl || !timeEl) return;
 
     let tracks = [];
     let currentIdx = -1;
@@ -445,6 +459,7 @@
     let fxOn = false;
     let powered = false;
 
+    // WebAudio graph (dry + wet)
     let ctx = null, src = null;
     let dryGain = null, wetGain = null, master = null, limiter = null;
     let hp = null, lp = null, split = null, merge = null, dL = null, dR = null;
@@ -467,6 +482,7 @@
 
     const ensureGraph = async () => {
       if (ctx) return;
+
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       src = ctx.createMediaElementSource(audio);
 
@@ -587,41 +603,44 @@
       timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
     };
 
+    const albumFromFolder = (folderSlug) => {
+      const f = (folderSlug || "").toLowerCase();
+
+      if (f === "fauna-flora-fauna-flora") return "fauna flora";
+      if (f === "steve-ward-see-and-be-seen") return "see and be seen";
+      if (f === "steve-ward-opening-night-remastered") return "opening night (2026 remaster)";
+      if (f === "steve-ward-unreleased") return "unreleased";
+
+      // fallback: turn slug into readable words
+      return f.replace(/-/g, " ").trim();
+    };
+
     const deriveAlbum = (filePath) => {
       try{
         const parts = decodeURIComponent(filePath).split("/");
-        const folder = parts[1] || ""; // e.g. "steve-ward-see-and-be-seen"
-        if (!folder) return "";
-
-        if (folder === "fauna-flora-fauna-flora") return "fauna flora";
-        if (folder === "steve-ward-unreleased") return "unreleased";
-
-        if (folder.startsWith("steve-ward-")) {
-          return folder.replace(/^steve-ward-/, "").replace(/-/g, " ");
-        }
-
-        return folder.replace(/-/g, " ");
+        const folder = parts[1] || "";
+        return albumFromFolder(folder);
       } catch(e){
         return "";
       }
     };
 
-    const setMetaLine = (album, artist) => {
-      const a = (album || "unreleased").toLowerCase();
-      const r = (artist || "unknown").toLowerCase();
-      albumHot.textContent = `'${a}'`;
-      artistHot.textContent = `'${r}'`;
+    const setTakeLine = (album, artist) => {
+      if (!album) { takeEl.textContent = ""; return; }
+      if (album === "unreleased") { takeEl.textContent = "unreleased"; return; }
+      takeEl.textContent = `taken from '${album}' by ${artist}`;
     };
 
     const setUI = () => {
       stage.classList.toggle("powered", powered);
+
       const playing = powered && !audio.paused && !audio.ended;
       stage.classList.toggle("spinning", playing);
 
-      /* FIX: make pause button show play triangle when paused */
       pauseBtn.classList.toggle("pausedState", powered && (audio.paused || audio.ended));
 
       updateTime();
+
       if (!playing) stage.classList.remove("fxOn");
       else if (fxOn) stage.classList.add("fxOn");
     };
@@ -645,10 +664,11 @@
 
       const title = (t.title || "").toLowerCase();
       const artist = (t.artist || "").toLowerCase();
+
       titleEl.textContent = title || "unknown";
 
       const album = deriveAlbum(t.file);
-      setMetaLine(album, artist);
+      setTakeLine(album, artist);
 
       audio.load();
       updateTime();
@@ -676,8 +696,7 @@
 
       if (errBurst >= 3) {
         audio.pause();
-        albumHot.textContent = "'not available yet'";
-        artistHot.textContent = "''";
+        takeEl.textContent = "not available yet";
         setUI();
         return;
       }
@@ -785,8 +804,7 @@
       .catch(() => {
         ready = false;
         titleEl.textContent = "playlist missing";
-        albumHot.textContent = "''";
-        artistHot.textContent = "''";
+        takeEl.textContent = "";
         timeEl.textContent = "0:00 / 0:00";
         setUI();
       });
